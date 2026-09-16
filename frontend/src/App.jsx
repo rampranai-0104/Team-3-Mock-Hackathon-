@@ -12,20 +12,15 @@ import ArtisanFollowers from './pages/ArtisanFollowers';
 import ArtisanProducts from './pages/ArtisanProducts';
 import ArtisanSettings from './pages/ArtisanSettings';
 
-/* Admin Executive Console Imports */
+/* Admin Executive Console Imports (Core 6 Features + Overview + Settings) */
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminArtistsPage from './pages/admin/AdminArtistsPage';
 import AdminArtFormsPage from './pages/admin/AdminArtFormsPage';
 import AdminEventsPage from './pages/admin/AdminEventsPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
-import AdminRequestsPage from './pages/admin/AdminRequestsPage';
-import AdminBookingsPage from './pages/admin/AdminBookingsPage';
-import AdminOrdersPage from './pages/admin/AdminOrdersPage';
-import AdminKnowledgePage from './pages/admin/AdminKnowledgePage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
-import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 /**
@@ -166,21 +161,45 @@ export default function App() {
         {/* /admin alias redirecting to /dashboard/admin */}
         <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
 
-        {/* Admin Executive Console Routes */}
+        {/* Admin Executive Console Routes - Prioritizing the 6 Core Features */}
         <Route path="/dashboard/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
+
+          {/* 1. Artists Module */}
           <Route path="artists" element={<AdminArtistsPage />} />
+          <Route path="artists/verification" element={<AdminArtistsPage />} />
+          <Route path="artists/lineages" element={<AdminArtistsPage />} />
+
+          {/* 2. Art Forms Module */}
           <Route path="art-forms" element={<AdminArtFormsPage />} />
+          <Route path="art-forms/taxonomy" element={<AdminArtFormsPage />} />
+
+          {/* 3. Events Module */}
           <Route path="events" element={<AdminEventsPage />} />
+          <Route path="events/exhibitions" element={<AdminEventsPage />} />
+
+          {/* 4. Products Module */}
           <Route path="products" element={<AdminProductsPage />} />
-          <Route path="requests" element={<AdminRequestsPage />} />
-          <Route path="bookings" element={<AdminBookingsPage />} />
-          <Route path="orders" element={<AdminOrdersPage />} />
-          <Route path="knowledge" element={<AdminKnowledgePage />} />
+          <Route path="products/curation" element={<AdminProductsPage />} />
+          <Route path="products/orders" element={<AdminProductsPage />} />
+
+          {/* 5. Users Module */}
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/guild" element={<AdminUsersPage />} />
+
+          {/* 6. Analytics Module */}
           <Route path="analytics" element={<AdminAnalyticsPage />} />
-          <Route path="notifications" element={<AdminNotificationsPage />} />
+          <Route path="analytics/impact" element={<AdminAnalyticsPage />} />
+
+          {/* Settings */}
           <Route path="settings" element={<AdminSettingsPage />} />
+
+          {/* Contextual redirects for secondary paths */}
+          <Route path="requests" element={<Navigate to="/dashboard/admin/artists" replace />} />
+          <Route path="bookings" element={<Navigate to="/dashboard/admin/events" replace />} />
+          <Route path="orders" element={<Navigate to="/dashboard/admin/products" replace />} />
+          <Route path="knowledge" element={<Navigate to="/dashboard/admin/art-forms" replace />} />
+          <Route path="notifications" element={<Navigate to="/dashboard/admin/settings" replace />} />
         </Route>
 
         {/* Catch all to landing page */}

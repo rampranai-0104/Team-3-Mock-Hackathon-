@@ -6,13 +6,8 @@ import {
   Palette,
   Calendar,
   Package,
-  Inbox,
-  Handshake,
-  ShoppingBag,
-  BookOpen,
   UserCheck,
   BarChart3,
-  Bell,
   Settings,
   ShieldCheck,
   X,
@@ -29,19 +24,14 @@ export default function AdminSidebar({ isOpen, onClose }) {
   };
 
   const navItems = [
-    { to: '/dashboard/admin', label: 'Console Overview', icon: LayoutDashboard },
-    { to: '/dashboard/admin/artists', label: 'Artisans & Lineages', icon: Users },
-    { to: '/dashboard/admin/art-forms', label: 'Cultural Taxonomy', icon: Palette },
-    { to: '/dashboard/admin/events', label: 'Exhibitions & Loans', icon: Calendar },
-    { to: '/dashboard/admin/products', label: 'Marketplace Curation', icon: Package },
-    { to: '/dashboard/admin/requests', label: 'Commissions & Inquiries', icon: Inbox },
-    { to: '/dashboard/admin/bookings', label: 'Institutional Escrow', icon: Handshake },
-    { to: '/dashboard/admin/orders', label: 'Provenance Orders', icon: ShoppingBag },
-    { to: '/dashboard/admin/knowledge', label: 'Oral Archives & Lore', icon: BookOpen },
-    { to: '/dashboard/admin/users', label: 'Guild & User Registry', icon: UserCheck },
-    { to: '/dashboard/admin/analytics', label: 'Analytical Trajectory', icon: BarChart3 },
-    { to: '/dashboard/admin/notifications', label: 'System Attestations', icon: Bell },
-    { to: '/dashboard/admin/settings', label: 'Protocol Settings', icon: Settings },
+    { to: '/dashboard/admin', label: 'Dashboard / Overview', icon: LayoutDashboard },
+    { to: '/dashboard/admin/artists', label: 'Artists', icon: Users },
+    { to: '/dashboard/admin/art-forms', label: 'Art Forms', icon: Palette },
+    { to: '/dashboard/admin/events', label: 'Events', icon: Calendar },
+    { to: '/dashboard/admin/products', label: 'Products', icon: Package },
+    { to: '/dashboard/admin/users', label: 'Users', icon: UserCheck },
+    { to: '/dashboard/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/dashboard/admin/settings', label: 'Settings', icon: Settings },
   ];
 
   return (

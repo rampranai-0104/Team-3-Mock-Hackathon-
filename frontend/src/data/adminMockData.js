@@ -14,7 +14,7 @@ export const ADMIN_SYSTEM_STATUS = {
 export const ADMIN_KPIS = [
   {
     id: 'kpi-artisans',
-    title: 'Master Artisans Supported',
+    title: 'Verified Master Artisans',
     value: '1,482',
     trend: '+14% QoQ verified onboarding',
     progress: 78,
@@ -24,12 +24,42 @@ export const ADMIN_KPIS = [
   },
   {
     id: 'kpi-traditions',
-    title: 'Indigenous Traditions',
+    title: 'Active Art Forms',
     value: '42 Forms',
     trend: '100% Accredited GI Registries',
     progress: 92,
     progressColor: 'var(--color-secondary)',
     icon: 'history_edu',
+    iconColor: 'var(--color-secondary)',
+  },
+  {
+    id: 'kpi-events',
+    title: 'Total Events & Masterclasses',
+    value: '128 Scheduled',
+    trend: '24 Confirmed Upcoming This Quarter',
+    progress: 68,
+    progressColor: 'var(--color-tertiary)',
+    icon: 'school',
+    iconColor: 'var(--color-secondary)',
+  },
+  {
+    id: 'kpi-products',
+    title: 'Total Curated Products',
+    value: '384 Artworks',
+    trend: '94% Sealed with Physical NFC Provenance',
+    progress: 88,
+    progressColor: 'var(--color-primary)',
+    icon: 'inventory_2',
+    iconColor: 'var(--color-primary)',
+  },
+  {
+    id: 'kpi-users',
+    title: 'Total Registered Users',
+    value: '8,920',
+    trend: 'Master Guilds & Accredited Museums',
+    progress: 74,
+    progressColor: 'var(--color-secondary)',
+    icon: 'group',
     iconColor: 'var(--color-secondary)',
   },
   {
@@ -41,16 +71,6 @@ export const ADMIN_KPIS = [
     progressColor: 'var(--color-primary-container)',
     icon: 'account_balance',
     iconColor: 'var(--color-primary)',
-  },
-  {
-    id: 'kpi-reach',
-    title: 'Audience & Student Reach',
-    value: '148,900',
-    trend: 'In 34 Countries Global Guilds',
-    progress: 64,
-    progressColor: 'var(--color-tertiary)',
-    icon: 'school',
-    iconColor: 'var(--color-secondary)',
   },
 ];
 
@@ -448,7 +468,8 @@ export const ADMIN_USERS_LIST = [
   {
     id: 'USR-001',
     name: 'Anand Singh Shyam',
-    role: 'Master Artisan',
+    email: 'anand.shyam@gondart.in',
+    role: 'Artist',
     registered: 'Jan 14, 2024',
     activity: 'Active (Uploaded new motif)',
     status: 'Verified',
@@ -456,7 +477,8 @@ export const ADMIN_USERS_LIST = [
   {
     id: 'USR-002',
     name: 'Kavita Singhania',
-    role: 'Verified Collector',
+    email: 'kavita.s@heritagearts.org',
+    role: 'Public User',
     registered: 'Mar 22, 2024',
     activity: 'Purchased Tarpa Canvas',
     status: 'Verified',
@@ -464,7 +486,8 @@ export const ADMIN_USERS_LIST = [
   {
     id: 'USR-003',
     name: 'Dr. Alok Ranjan (NGMA)',
-    role: 'Institution Lead',
+    email: 'alok.ranjan@ngma.gov.in',
+    role: 'Institution',
     registered: 'May 08, 2024',
     activity: 'Approved Escrow Payout',
     status: 'Accredited',
@@ -472,10 +495,29 @@ export const ADMIN_USERS_LIST = [
   {
     id: 'USR-004',
     name: 'Tvarita Trust Governance Node',
-    role: 'Executive Admin',
+    email: 'root-governance@tvarita.org',
+    role: 'Admin',
     registered: 'Aug 01, 2023',
     activity: 'Multi-sig Root Attestation',
     status: 'Root Multi-Sig',
+  },
+  {
+    id: 'USR-005',
+    name: 'Priya Nair (Patron)',
+    email: 'priya.nair@patronage.io',
+    role: 'Public User',
+    registered: 'Jul 19, 2024',
+    activity: 'Commissioned Warli Murals',
+    status: 'Active',
+  },
+  {
+    id: 'USR-006',
+    name: 'Master Bhaskar Chitrakar',
+    email: 'bhaskar.chitrakar@dahanu.in',
+    role: 'Artist',
+    registered: 'Feb 10, 2024',
+    activity: 'Conducted NGMA Masterclass',
+    status: 'Verified',
   },
 ];
 
@@ -614,4 +656,41 @@ export const ADMIN_ORDERS_LIST = [
     status: 'Vault Escrow Secured',
   },
 ];
+
+export const ADMIN_LINEAGES_LIST = [
+  {
+    id: 'LIN-001',
+    lineageTitle: 'Suvasini Ancestral Warli Lineage',
+    masterArtist: 'Master Bhaskar Chitrakar',
+    generation: '5th Generation Direct Custodian',
+    region: 'Ganjad, Palghar, Maharashtra',
+    canonicalMotif: 'Palghat Lagna Chowk & Tarpa Spiral',
+    sacredPigment: 'Rice Paste Ground with Water & Gum Arabica',
+    oralRecordsCount: '14 Shlokas Recorded',
+    status: 'Authenticated & Registered',
+  },
+  {
+    id: 'LIN-002',
+    lineageTitle: 'Jangarh Singh Shyam School of Gond Art',
+    masterArtist: 'Anand Singh Shyam',
+    generation: '2nd Generation Jangarh Lineage',
+    region: 'Patangarh, Dindori, MP',
+    canonicalMotif: 'Mahua Tree of Life & Zoomorphic Dots',
+    sacredPigment: 'Natural Geru, Peeli Mitti & Plant Resins',
+    oralRecordsCount: '22 Forest Tales Archived',
+    status: 'Authenticated & Registered',
+  },
+  {
+    id: 'LIN-003',
+    lineageTitle: 'Raghurajpur Heritage Chitrakar Lineage',
+    masterArtist: 'Bhaskar Chitrakar',
+    generation: '7th Generation Patta Craftsman',
+    region: 'Raghurajpur, Puri, Odisha',
+    canonicalMotif: 'Gita Govinda & Jagannath Tala Pattachitra',
+    sacredPigment: 'Bean-Leaf Soot & Conch Shell Lime',
+    oralRecordsCount: '31 Sanskrit Shlokas Archived',
+    status: 'Authenticated & Registered',
+  },
+];
+
 

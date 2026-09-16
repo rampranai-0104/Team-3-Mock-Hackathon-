@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, History, Landmark, School, TrendingUp } from 'lucide-react';
+import { Users, History, Landmark, School, TrendingUp, Package, UserCheck } from 'lucide-react';
 import { ADMIN_KPIS } from '../../data/adminMockData';
 
 export default function AdminKpiSection() {
@@ -9,12 +9,16 @@ export default function AdminKpiSection() {
         return <Users size={22} color="var(--color-primary)" />;
       case 'history_edu':
         return <History size={22} color="var(--color-secondary)" />;
-      case 'account_balance':
-        return <Landmark size={22} color="var(--color-primary)" />;
       case 'school':
         return <School size={22} color="var(--color-secondary)" />;
+      case 'inventory_2':
+        return <Package size={22} color="var(--color-primary)" />;
+      case 'group':
+        return <UserCheck size={22} color="var(--color-secondary)" />;
+      case 'account_balance':
+        return <Landmark size={22} color="var(--color-primary)" />;
       default:
-        return <Users size={22} />;
+        return <Users size={22} color="var(--color-primary)" />;
     }
   };
 
