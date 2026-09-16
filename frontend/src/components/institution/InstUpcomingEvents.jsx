@@ -1,8 +1,43 @@
-import React, { useState } from 'react';
-import { institutionData } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
+import institutionService from '../../services/institutionService';
+import { formatDate, formatTime } from '../../utils/formatters';
+
+function mapExperienceToEngagement(raw) {
+  return {
+    id: raw._id,
+    title: raw.title,
+    tradition: raw.artFormIds?.[0]?.name || 'Living Tradition',
+    master: raw.artistIds?.[0]?.displayName || 'Guild Faculty',
+    date: formatDate(raw.date),
+    time: raw.time || formatTime(raw.date),
+    cohort: `Up to ${raw.capacity || raw.availableSeats || 0} Participants`,
+    format: raw.location?.isOnline ? 'Hybrid Virtual Atelier' : (raw.location?.venue || raw.location?.city || 'On-Campus'),
+    status: typeof raw.availableSeats === 'number' && raw.availableSeats > 0 ? 'Seats Available' : 'Fully Booked',
+  };
+}
 
 export default function InstUpcomingEvents() {
-  const [engagements] = useState(institutionData.upcomingEngagements);
+  const [engagements, setEngagements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await institutionService.getExperiences();
+        const list = Array.isArray(res?.data) ? res.data : [];
+        if (mounted) setEngagements(list.map(mapExperienceToEngagement));
+      } catch (err) {
+        if (mounted) setError(err.message || 'Unable to load institutional sessions right now.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -22,75 +57,95 @@ export default function InstUpcomingEvents() {
 
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 rounded-full bg-surface-container-high text-on-surface text-xs font-semibold">
-            {engagements.length} Confirmed Engagements
+            {engagements.length} Curated Experience{engagements.length === 1 ? '' : 's'}
           </span>
         </div>
       </div>
 
+      {loading && (
+        <div className="text-center py-12 text-on-surface-variant">
+          <p className="font-headline-sm text-base">Loading institutional sessions…</p>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="text-center py-12 text-error">
+          <p className="font-headline-sm text-base">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && engagements.length === 0 && (
+        <div className="text-center py-12 text-on-surface-variant">
+          <p className="font-headline-sm text-base">No curated experiences published yet — check back soon.</p>
+        </div>
+      )}
+
       {/* Grid of Engagements */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {engagements.map((eng) => (
-          <div
-            key={eng.id}
-            className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">
-                  {eng.tradition}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-surface-container-lowest text-primary font-semibold border border-outline-variant/20">
-                  {eng.status}
-                </span>
+      {!loading && !error && engagements.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {engagements.map((eng) => (
+            <div
+              key={eng.id}
+              className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">
+                    {eng.tradition}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-container-lowest text-primary font-semibold border border-outline-variant/20">
+                    {eng.status}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="font-headline-sm text-lg font-bold text-on-surface leading-snug">
+                    {eng.title}
+                  </h3>
+                  <p className="text-xs text-primary font-medium mt-1">
+                    Master Custodian: {eng.master}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/20 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
+                    <span>{eng.date} • {eng.time}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px] text-primary">groups</span>
+                    <span>{eng.cohort}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px] text-primary">hub</span>
+                    <span>{eng.format}</span>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <h3 className="font-headline-sm text-lg font-bold text-on-surface leading-snug">
-                  {eng.title}
-                </h3>
-                <p className="text-xs text-primary font-medium mt-1">
-                  Master Custodian: {eng.master}
-                </p>
-              </div>
+              <div className="pt-4 mt-4 border-t border-outline-variant/20 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => alert(`Launching Virtual Guild Atelier Link for: ${eng.title}`)}
+                  className="flex-1 py-2 px-3 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[15px]">videocam</span>
+                  <span>Join Atelier</span>
+                </button>
 
-              <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/20 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
-                  <span>{eng.date} • {eng.time}</span>
-                </div>
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[18px] text-primary">groups</span>
-                  <span>{eng.cohort}</span>
-                </div>
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[18px] text-primary">hub</span>
-                  <span>{eng.format}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => alert(`Curriculum dossier & Student Preparation Workbook downloaded for ${eng.title}.`)}
+                  className="p-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs"
+                  title="Download Curriculum Dossier"
+                >
+                  <span className="material-symbols-outlined text-[16px]">download</span>
+                </button>
               </div>
             </div>
-
-            <div className="pt-4 mt-4 border-t border-outline-variant/20 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => alert(`Launching Virtual Guild Atelier Link for: ${eng.title}`)}
-                className="flex-1 py-2 px-3 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[15px]">videocam</span>
-                <span>Join Atelier</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => alert(`Curriculum dossier & Student Preparation Workbook downloaded for ${eng.title}.`)}
-                className="p-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs"
-                title="Download Curriculum Dossier"
-              >
-                <span className="material-symbols-outlined text-[16px]">download</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -56,20 +56,9 @@ export default function ArtistBioModal({ artist, onClose, isFollowing, onToggleF
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
-              <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Experience</span>
-              <span className="font-headline-sm text-base font-bold text-on-surface">{artist.experience}</span>
-            </div>
-            <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
-              <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Active Patrons</span>
-              <span className="font-headline-sm text-base font-bold text-on-surface">{artist.followersCount.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-primary-fixed/40 border border-primary/20 text-xs text-on-primary-fixed-variant flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-primary">volunteer_activism</span>
-            <span>All workshops and artwork proceeds are transferred 100% directly to the master artisan's guild bank account.</span>
+          <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
+            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Experience</span>
+            <span className="font-headline-sm text-base font-bold text-on-surface">{artist.experience}</span>
           </div>
         </div>
 

@@ -1,17 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminManagementView from '../../components/admin/AdminManagementView';
-import { ADMIN_USERS_LIST } from '../../data/adminMockData';
-import { Users, ShieldCheck, CheckCircle2, X } from 'lucide-react';
+import adminService from '../../services/adminService';
+import { Users, ShieldCheck, CheckCircle2, X, Loader2 } from 'lucide-react';
+
+const ROLE_STYLE = {
+  admin: { bg: 'var(--color-primary-container)', color: 'var(--color-on-primary-container)' },
+  institution: { bg: 'var(--color-tertiary-container)', color: 'var(--color-on-tertiary-container)' },
+  artist: { bg: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' },
+  public: { bg: 'var(--color-surface-container)', color: 'var(--color-on-surface)' },
+};
+
+const STATUS_STYLE = {
+  active: { bg: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' },
+  suspended: { bg: 'var(--color-primary-container)', color: 'var(--color-on-primary-container)' },
+  inactive: { bg: 'var(--color-surface-container-highest)', color: 'var(--color-on-surface-variant)' },
+};
 
 /**
- * AdminUsersPage - Core Feature 5: Users Module
- * Encompasses Public Users, Artists, Institutions, Admins, Guild & Access Registry.
+ * AdminUsersPage - Users Module
+ * Wired to real backend: GET/PATCH/DELETE /api/admin/users
  */
 export default function AdminUsersPage() {
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'guild'
-  const [users, setUsers] = useState(ADMIN_USERS_LIST);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [modalMode, setModalMode] = useState(null); // 'view' | 'edit' | 'status'
+  const [modalMode, setModalMode] = useState(null); // 'view' | 'edit'
+  const [formData, setFormData] = useState({});
+  const [saving, setSaving] = useState(false);
   const [actionNotice, setActionNotice] = useState(null);
 
   const showNotice = (msg) => {
@@ -19,24 +35,72 @@ export default function AdminUsersPage() {
     setTimeout(() => setActionNotice(null), 3500);
   };
 
-  const handleVerifyUser = (row) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === row.id ? { ...u, status: 'Verified' } : u))
-    );
-    showNotice(`User "${row.name}" verified and accredited.`);
-  };
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminService.getUsers({ limit: 100 });
+      const data = res?.data || res;
+      setUsers(Array.isArray(data?.users) ? data.users : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load users.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleSuspendUser = (row) => {
-    const newStatus = row.status === 'Suspended' ? 'Active' : 'Suspended';
-    setUsers((prev) =>
-      prev.map((u) => (u.id === row.id ? { ...u, status: newStatus } : u))
-    );
-    showNotice(`User "${row.name}" status changed to ${newStatus}.`);
-  };
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const handleChangeStatus = (row) => {
+  const openView = (row) => {
     setSelectedUser(row);
-    setModalMode('status');
+    setModalMode('view');
+  };
+
+  const openEdit = (row) => {
+    setSelectedUser(row);
+    setFormData({ name: row.name || '', phone: row.phone || '', role: row.role || 'public', status: row.status || 'active' });
+    setModalMode('edit');
+  };
+
+  const handleSuspendToggle = async (row) => {
+    const newStatus = row.status === 'suspended' ? 'active' : 'suspended';
+    try {
+      await adminService.updateUserStatus(row._id, newStatus);
+      setUsers((prev) => prev.map((u) => (u._id === row._id ? { ...u, status: newStatus } : u)));
+      showNotice(`User "${row.name}" status changed to ${newStatus}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update user status.');
+    }
+  };
+
+  const handleDeactivate = async (row) => {
+    if (!window.confirm(`Deactivate user "${row.name}"?`)) return;
+    try {
+      await adminService.deleteUser(row._id);
+      setUsers((prev) => prev.map((u) => (u._id === row._id ? { ...u, status: 'inactive' } : u)));
+      showNotice(`User "${row.name}" deactivated.`);
+    } catch (err) {
+      setError(err.message || 'Failed to deactivate user.');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedUser) return;
+    setSaving(true);
+    try {
+      const res = await adminService.updateUser(selectedUser._id, formData);
+      const updated = res?.data || res;
+      setUsers((prev) => prev.map((u) => (u._id === selectedUser._id ? { ...u, ...updated } : u)));
+      showNotice(`Updated user details for ${selectedUser.name}.`);
+      setSelectedUser(null);
+      setModalMode(null);
+    } catch (err) {
+      setError(err.message || 'Failed to update user.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const columns = [
@@ -45,28 +109,16 @@ export default function AdminUsersPage() {
       accessor: (row) => (
         <div>
           <div style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>{row.name}</div>
-          <div style={{ fontSize: '11px', color: 'var(--color-outline)' }}>ID: {row.id}</div>
+          <div style={{ fontSize: '11px', color: 'var(--color-outline)' }}>ID: {row._id}</div>
         </div>
       ),
     },
     {
       header: 'Role',
       accessor: (row) => {
-        const getRoleBadgeStyle = (role) => {
-          switch (role) {
-            case 'Admin':
-              return { bg: 'var(--color-primary-container)', color: 'var(--color-on-primary-container)' };
-            case 'Institution':
-              return { bg: 'var(--color-tertiary-container)', color: 'var(--color-on-tertiary-container)' };
-            case 'Artist':
-              return { bg: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' };
-            default:
-              return { bg: 'var(--color-surface-container)', color: 'var(--color-on-surface)' };
-          }
-        };
-        const s = getRoleBadgeStyle(row.role);
+        const s = ROLE_STYLE[row.role] || ROLE_STYLE.public;
         return (
-          <span className="badge-editorial" style={{ backgroundColor: s.bg, color: s.color }}>
+          <span className="badge-editorial" style={{ backgroundColor: s.bg, color: s.color, textTransform: 'capitalize' }}>
             {row.role}
           </span>
         );
@@ -81,143 +133,48 @@ export default function AdminUsersPage() {
       ),
     },
     {
-      header: 'Registration Date',
-      accessor: 'registered',
+      header: 'Registered',
+      accessor: (row) => (row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'),
     },
     {
       header: 'Status',
-      accessor: (row) => (
-        <span
-          className="badge-editorial"
-          style={{
-            backgroundColor:
-              row.status === 'Verified' || row.status === 'Accredited'
-                ? 'var(--color-secondary-container)'
-                : row.status === 'Suspended'
-                ? 'var(--color-primary-container)'
-                : 'var(--color-surface-container-highest)',
-            color:
-              row.status === 'Verified' || row.status === 'Accredited'
-                ? 'var(--color-on-secondary-container)'
-                : row.status === 'Suspended'
-                ? 'var(--color-on-primary-container)'
-                : 'var(--color-on-surface-variant)',
-          }}
-        >
-          {row.status}
-        </span>
-      ),
+      accessor: (row) => {
+        const s = STATUS_STYLE[row.status] || STATUS_STYLE.inactive;
+        return (
+          <span className="badge-editorial" style={{ backgroundColor: s.bg, color: s.color, textTransform: 'capitalize' }}>
+            {row.status}
+          </span>
+        );
+      },
     },
     {
-      header: 'Activity',
-      accessor: (row) => (
-        <span style={{ fontSize: '12px', color: 'var(--color-on-surface)' }}>
-          {row.activity}
-        </span>
-      ),
+      header: 'Email Verified',
+      accessor: (row) => (row.emailVerified ? 'Yes' : 'No'),
     },
   ];
 
   const actions = [
-    {
-      label: 'View',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedUser(row);
-        setModalMode('view');
-      },
-    },
-    {
-      label: 'Edit',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedUser(row);
-        setModalMode('edit');
-      },
-    },
-    {
-      label: 'Verify',
-      variant: 'surface',
-      onClick: handleVerifyUser,
-    },
-    {
-      label: 'Change Status',
-      variant: 'surface',
-      onClick: handleChangeStatus,
-    },
-    {
-      label: 'Suspend',
-      variant: 'primary',
-      onClick: handleSuspendUser,
-    },
+    { label: 'View', variant: 'surface', onClick: openView },
+    { label: 'Edit', variant: 'surface', onClick: openEdit },
+    { label: 'Suspend/Activate', variant: 'primary', onClick: handleSuspendToggle },
+    { label: 'Deactivate', variant: 'surface', onClick: handleDeactivate },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-      {/* Header & Feature Context */}
+      {/* Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
         <div>
           <h1 className="font-headline-sm" style={{ color: 'var(--color-on-surface)' }}>
-            Users & Guild Access Governance
+            Users Management
           </h1>
           <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-            Public Users, Master Artisans, Partner Institutions, Multi-Sig Administrators & Folk Guilds
+            Public users, artists, institutions, and administrators
           </p>
         </div>
-
-        {/* Tab Selector */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: 'var(--color-surface-container-low)',
-            borderRadius: '9999px',
-            padding: '4px',
-            gap: '4px',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('users')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'users' ? 700 : 500,
-              backgroundColor: activeTab === 'users' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'users' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Users size={16} />
-            <span>All Users Directory ({users.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('guild')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'guild' ? 700 : 500,
-              backgroundColor: activeTab === 'guild' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'guild' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <ShieldCheck size={16} />
-            <span>Guild & Consortium Registry</span>
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-outline)', fontSize: '13px' }}>
+          <Users size={16} />
+          <span>{users.length} Total Users</span>
         </div>
       </div>
 
@@ -239,173 +196,52 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Tab 1: All Users Directory */}
-      {activeTab === 'users' && (
-        <AdminManagementView
-          title="Consortium User Accounts"
-          subtitle="Public Patrons, Folk Guild Artisans, Museum Curators & Governance Nodes"
-          data={users}
-          columns={columns}
-          actions={actions}
-          searchPlaceholder="Search users by name, email, role, or activity..."
-          filterKey="role"
-          filterOptions={['Public User', 'Artist', 'Institution', 'Admin']}
-          addLabel="Add User"
-          onAdd={() => {
-            setSelectedUser({
-              name: '',
-              email: '',
-              role: 'Public User',
-              registered: 'Today',
-              status: 'Active',
-              activity: 'Newly Registered',
-            });
-            setModalMode('edit');
+      {error && (
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--color-primary-container)',
+            color: 'var(--color-on-primary-container)',
+            fontSize: '13px',
           }}
-        />
-      )}
-
-      {/* Tab 2: Guild & Consortium Registry */}
-      {activeTab === 'guild' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              padding: '1.5rem',
-              borderRadius: '1rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <h3 className="font-headline-sm" style={{ fontSize: '20px', color: 'var(--color-on-surface)', marginBottom: '4px' }}>
-              Accredited Folk Guilds & Multi-Sig Signatories
-            </h3>
-            <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', fontSize: '13px' }}>
-              Autonomous tribal collectives holding sovereign attestation keys for GI compliance and provenance consensus.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
-              {[
-                {
-                  guild: 'Dindori Adivasi Gond Sangha',
-                  region: 'Madhya Pradesh',
-                  leader: 'Anand Singh Shyam',
-                  members: '512 Artisans',
-                  signatoryStatus: 'Multi-Sig Keyholder #01 Active',
-                  compliance: 'GI-IN-0442 Compliant',
-                },
-                {
-                  guild: 'Ganjad Warli Suvasini Guild',
-                  region: 'Maharashtra',
-                  leader: 'Master Bhaskar Chitrakar',
-                  members: '384 Artisans',
-                  signatoryStatus: 'Multi-Sig Keyholder #02 Active',
-                  compliance: 'GI-IN-0391 Compliant',
-                },
-                {
-                  guild: 'National Gallery of Modern Art (NGMA)',
-                  region: 'New Delhi',
-                  leader: 'Dr. Alok Ranjan',
-                  members: 'Curatorial Board',
-                  signatoryStatus: 'Institutional Node #03 Active',
-                  compliance: 'UNESCO ICH Accredited',
-                },
-                {
-                  guild: 'Raghurajpur Patta Shilpi Samiti',
-                  region: 'Odisha',
-                  leader: 'Bhaskar Chitrakar',
-                  members: '346 Lineage Artists',
-                  signatoryStatus: 'Multi-Sig Keyholder #04 Active',
-                  compliance: 'GI-IN-0022 Compliant',
-                },
-              ].map((g, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '1.25rem',
-                    borderRadius: '1rem',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    border: '1px solid var(--color-surface-container-high)',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="badge-editorial" style={{ backgroundColor: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' }}>
-                        {g.compliance}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600 }}>
-                        {g.members}
-                      </span>
-                    </div>
-
-                    <h4 className="font-headline-sm" style={{ fontSize: '17px', marginTop: '8px', color: 'var(--color-on-surface)' }}>
-                      {g.guild}
-                    </h4>
-
-                    <div style={{ fontSize: '12px', color: 'var(--color-outline)', marginTop: '2px' }}>
-                      Region: {g.region} • Lead: {g.leader}
-                    </div>
-
-                    <div style={{ fontSize: '12px', color: 'var(--color-on-surface)', marginTop: '8px', fontWeight: 600 }}>
-                      Consensus: {g.signatoryStatus}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', paddingTop: '0.75rem', borderTop: '1px solid var(--color-surface-container)' }}>
-                    <button
-                      type="button"
-                      className="btn-surface"
-                      onClick={() => showNotice(`Audit logs for guild "${g.guild}" loaded.`)}
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px' }}
-                    >
-                      Audit Guild
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => showNotice(`Multi-sig key verification confirmed for ${g.leader}.`)}
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      Verify Key
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        >
+          {error}
         </div>
       )}
 
-      {/* Modal Dialog for View / Edit / Status */}
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-outline)', padding: '2rem' }}>
+          <Loader2 size={18} className="animate-spin" />
+          Loading users...
+        </div>
+      ) : (
+        <AdminManagementView
+          title="User Accounts"
+          subtitle="Public Patrons, Artists, Institutions & Administrators"
+          data={users}
+          columns={columns}
+          actions={actions}
+          searchPlaceholder="Search users by name, email, or role..."
+          filterKey="role"
+          filterOptions={['public', 'artist', 'institution', 'admin']}
+        />
+      )}
+
+      {/* Modal */}
       {selectedUser && modalMode && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem',
           }}
-          onClick={() => setSelectedUser(null)}
+          onClick={() => { setSelectedUser(null); setModalMode(null); }}
         >
           <div
             style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              borderRadius: '1.25rem',
-              padding: '2rem',
-              maxWidth: '520px',
-              width: '100%',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
+              backgroundColor: 'var(--color-surface-container-lowest)', borderRadius: '1.25rem', padding: '2rem',
+              maxWidth: '520px', width: '100%', boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -413,50 +249,88 @@ export default function AdminUsersPage() {
               <h3 className="font-headline-sm" style={{ fontSize: '20px', margin: 0 }}>
                 {modalMode === 'view' && `User Profile: ${selectedUser.name}`}
                 {modalMode === 'edit' && `Edit User: ${selectedUser.name}`}
-                {modalMode === 'status' && `Change Status: ${selectedUser.name}`}
               </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedUser(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-outline)' }}
-              >
+              <button type="button" onClick={() => { setSelectedUser(null); setModalMode(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-outline)' }}>
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--color-on-surface-variant)' }}>
-              <div><strong>User ID:</strong> {selectedUser.id}</div>
-              <div><strong>Email:</strong> {selectedUser.email}</div>
-              <div><strong>Role:</strong> {selectedUser.role}</div>
-              <div><strong>Registration Date:</strong> {selectedUser.registered}</div>
-              <div><strong>Current Status:</strong> {selectedUser.status}</div>
-              <div><strong>Recent Activity:</strong> {selectedUser.activity}</div>
-            </div>
+            {modalMode === 'view' && (
+              <div style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--color-on-surface-variant)' }}>
+                <div><strong>User ID:</strong> {selectedUser._id}</div>
+                <div><strong>Email:</strong> {selectedUser.email}</div>
+                <div><strong>Phone:</strong> {selectedUser.phone || '—'}</div>
+                <div><strong>Role:</strong> {selectedUser.role}</div>
+                <div><strong>Registered:</strong> {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : '—'}</div>
+                <div><strong>Status:</strong> {selectedUser.status}</div>
+                <div><strong>Email Verified:</strong> {selectedUser.emailVerified ? 'Yes' : 'No'}</div>
+              </div>
+            )}
+
+            {modalMode === 'edit' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <FormField label="Name" value={formData.name} onChange={(v) => setFormData((f) => ({ ...f, name: v }))} />
+                <FormField label="Phone" value={formData.phone} onChange={(v) => setFormData((f) => ({ ...f, phone: v }))} />
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Role</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData((f) => ({ ...f, role: e.target.value }))}
+                    style={selectStyle}
+                  >
+                    <option value="public">public</option>
+                    <option value="artist">artist</option>
+                    <option value="institution">institution</option>
+                    <option value="admin">admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData((f) => ({ ...f, status: e.target.value }))}
+                    style={selectStyle}
+                  >
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                    <option value="suspended">suspended</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '1rem', borderTop: '1px solid var(--color-surface-container)' }}>
-              <button
-                type="button"
-                className="btn-surface"
-                onClick={() => setSelectedUser(null)}
-                style={{ padding: '8px 16px', fontSize: '13px' }}
-              >
+              <button type="button" className="btn-surface" onClick={() => { setSelectedUser(null); setModalMode(null); }} style={{ padding: '8px 16px', fontSize: '13px' }}>
                 Close
               </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  showNotice(`Updated user details for ${selectedUser.name}.`);
-                  setSelectedUser(null);
-                }}
-                style={{ padding: '8px 18px', fontSize: '13px' }}
-              >
-                Save Changes
-              </button>
+              {modalMode === 'edit' && (
+                <button type="button" className="btn-primary" onClick={handleSaveEdit} disabled={saving} style={{ padding: '8px 18px', fontSize: '13px' }}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const selectStyle = {
+  width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-surface-container-high)',
+  backgroundColor: 'var(--color-surface-container-lowest)', fontSize: '13px', color: 'var(--color-on-surface)', marginTop: '4px',
+};
+
+function FormField({ label, value, onChange }) {
+  return (
+    <div>
+      <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>{label}</label>
+      <input
+        type="text"
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        style={selectStyle}
+      />
     </div>
   );
 }

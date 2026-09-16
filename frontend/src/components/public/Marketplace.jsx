@@ -1,18 +1,57 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ArtworkDetailModal from './ArtworkDetailModal';
-import { marketplaceProducts } from '../../data/mockData';
+import publicService from '../../services/publicService';
+import { formatINR } from '../../utils/formatters';
+
+function mapProduct(raw) {
+  const title = raw.title || raw.name || 'Handcrafted Artwork';
+  const price = Number(raw.price) || 0;
+  return {
+    id: raw._id,
+    title,
+    tradition: raw.artFormId?.name || 'Traditional Craft',
+    artist: raw.artistId?.displayName || 'Verified Artisan',
+    price,
+    priceNumber: price,
+    formattedPrice: formatINR(price),
+    medium: raw.category || 'Mixed Media',
+    inStock: raw.stock ?? 0,
+    image: raw.images?.[0]?.url || raw.media?.[0]?.url || '',
+  };
+}
 
 export default function Marketplace({ onAddToCart }) {
   const [selectedTradition, setSelectedTradition] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const traditions = ['All', 'Warli Folk Painting', 'Gond Pardhan Art', 'Mithila / Madhubani', 'Odisha Pattachitra'];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await publicService.getProducts();
+        const list = Array.isArray(res?.data) ? res.data : [];
+        if (mounted) setProducts(list.map(mapProduct));
+      } catch (err) {
+        if (mounted) setError(err.message || 'Unable to load the marketplace right now.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-  const filteredProducts = marketplaceProducts.filter(item => {
+  const traditions = ['All', ...Array.from(new Set(products.map((p) => p.tradition)))];
+
+  const filteredProducts = products.filter(item => {
     const matchesTradition = selectedTradition === 'All' || item.tradition === selectedTradition;
-    const matchesSearch = 
+    const matchesSearch =
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.tradition.toLowerCase().includes(searchQuery.toLowerCase());
@@ -44,10 +83,10 @@ export default function Marketplace({ onAddToCart }) {
             Section 5 • Living Marketplace
           </span>
           <h2 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface">
-            Certified Original Artworks
+            Original Artworks
           </h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Each piece is hand-signed by verified master artisans with non-fungible physical NFC provenance seals and 100% royalty transparency.
+            Browse original artworks from verified master artisans.
           </p>
         </div>
 
@@ -84,19 +123,33 @@ export default function Marketplace({ onAddToCart }) {
         ))}
       </div>
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onSelectProduct={(p) => setSelectedProduct(p)}
-            onAddToCart={handleAddToCartWithToast}
-          />
-        ))}
-      </div>
+      {loading && (
+        <div className="text-center py-12 text-on-surface-variant">
+          <p className="font-headline-sm text-base">Loading marketplace…</p>
+        </div>
+      )}
 
-      {filteredProducts.length === 0 && (
+      {!loading && error && (
+        <div className="text-center py-12 text-error">
+          <p className="font-headline-sm text-base">{error}</p>
+        </div>
+      )}
+
+      {/* Products Grid */}
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onSelectProduct={(p) => setSelectedProduct(p)}
+              onAddToCart={handleAddToCartWithToast}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && filteredProducts.length === 0 && (
         <div className="text-center py-12 text-on-surface-variant">
           <span className="material-symbols-outlined text-outline text-[40px] mb-2">search_off</span>
           <p className="font-headline-sm text-base">No artworks found matching your search</p>
@@ -108,35 +161,6 @@ export default function Marketplace({ onAddToCart }) {
           </button>
         </div>
       )}
-
-      {/* CURATORIAL ADVISORY & CUSTOM PATRON COMMISSION CALLOUT */}
-      <section className="rounded-2xl bg-surface-container-highest p-6 lg:p-8 border border-outline-variant/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="material-symbols-outlined text-[26px]">draw</span>
-          </div>
-          <div>
-            <span className="text-[10px] font-label-caps text-primary uppercase font-bold tracking-wider block">
-              Bespoke Patronage Service
-            </span>
-            <h3 className="font-headline-sm text-xl font-bold text-on-surface mt-0.5">
-              Curatorial Advisory &bull; Patron Direct Commission
-            </h3>
-            <p className="text-body-sm text-on-surface-variant mt-1 max-w-xl">
-              Seeking an ancestral heirloom canvas, sacred temple scroll, or site-specific architectural mural? Our curatorial council coordinates directly with hereditary guild elders with 100% escrow protection.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => alert("Curatorial Commission Inquiry Form opened for bespoke masterwork requisition.")}
-          className="px-6 py-3 rounded-full bg-on-surface hover:bg-primary text-surface font-semibold text-xs transition-colors flex items-center gap-2 flex-shrink-0 shadow-md"
-        >
-          <span>Initiate Commission Dialogue</span>
-          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-        </button>
-      </section>
 
       {/* Detail Modal */}
       {selectedProduct && (
@@ -167,27 +191,14 @@ function ProductCard({ product, onSelectProduct, onAddToCart }) {
               onError={() => setImageError(true)}
               className="w-full h-full object-cover rounded-xl shadow-xs group-hover:scale-105 transition-transform duration-500"
             />
-            <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
-              GI CERTIFIED
-            </span>
-            <span className="absolute bottom-4 left-4 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px]">
-              {product.dimensions}
-            </span>
           </div>
         )}
 
         {/* Product Info */}
         <div className="p-4 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
-              {product.tradition}
-            </span>
-            {(!product.image || imageError) && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-surface-container text-on-surface font-medium">
-                {product.dimensions}
-              </span>
-            )}
-          </div>
+          <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
+            {product.tradition}
+          </span>
 
           <h3 className="font-headline-sm text-base font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1">
             {product.title}
@@ -200,12 +211,6 @@ function ProductCard({ product, onSelectProduct, onAddToCart }) {
           <p className="text-[11px] text-on-surface-variant line-clamp-1">
             {product.medium}
           </p>
-
-          {/* Direct-to-artisan assurance badge */}
-          <div className="p-2 rounded-lg bg-secondary-container/40 text-[10px] text-on-secondary-container font-medium flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[14px]">verified</span>
-            <span className="truncate">100% Direct Escrow to Artisan</span>
-          </div>
         </div>
       </div>
 

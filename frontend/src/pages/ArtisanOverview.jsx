@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import artisanService from '../services/artisanService';
 import {
   IndianRupee,
   Truck,
@@ -15,21 +17,134 @@ import {
   Radio,
   ArrowRight,
   ShieldCheck,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
-import {
-  ARTIST_PROFILE,
-  OVERVIEW_METRICS,
-  INDIVIDUAL_REQUESTS,
-  UPCOMING_EVENTS,
-  PRODUCTS_CATALOG,
-} from '../data/artisanMockData';
 import ArtworkImage from '../components/common/ArtworkImage';
+
+const formatINR = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
 
 export default function ArtisanOverview() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [profile, setProfile] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [earnings, setEarnings] = useState(null);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadArtistData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [profileRes, requestsRes, eventsRes, productsRes, earningsRes, followersRes] =
+          await Promise.allSettled([
+            artisanService.getProfile(),
+            artisanService.getRequests(),
+            artisanService.getEvents(),
+            artisanService.getProducts(),
+            artisanService.getEarnings(),
+            artisanService.getFollowers({ limit: 1 }),
+          ]);
+
+        if (!mounted) return;
+
+        if (profileRes.status === 'fulfilled') setProfile(profileRes.value?.data || null);
+        if (requestsRes.status === 'fulfilled') setRequests(requestsRes.value?.data || []);
+        if (eventsRes.status === 'fulfilled') setEvents(eventsRes.value?.data || []);
+        if (productsRes.status === 'fulfilled') setProducts(productsRes.value?.data || []);
+        if (earningsRes.status === 'fulfilled') setEarnings(earningsRes.value?.data || null);
+        if (followersRes.status === 'fulfilled') {
+          setFollowerCount(followersRes.value?.data?.followerCount ?? 0);
+        }
+
+        // If literally everything failed, surface an error banner.
+        const allFailed = [profileRes, requestsRes, eventsRes, productsRes, earningsRes, followersRes]
+          .every((r) => r.status === 'rejected');
+        if (allFailed) {
+          setError('Could not load your studio dashboard. Please check your connection and try again.');
+        }
+      } catch (err) {
+        if (mounted) setError(err.message || 'Failed to load studio dashboard.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    loadArtistData();
+    return () => { mounted = false; };
+  }, []);
+
+  const now = useMemo(() => new Date(), []);
+
+  const pendingRequests = useMemo(
+    () => requests.filter((r) => r.status === 'pending'),
+    [requests]
+  );
+
+  const upcomingEvents = useMemo(
+    () =>
+      events
+        .filter((e) => e.status !== 'cancelled' && new Date(e.dateTime) >= now)
+        .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)),
+    [events, now]
+  );
+
+  const activeProducts = useMemo(
+    () => products.filter((p) => p.status !== 'archived'),
+    [products]
+  );
+
+  const profileCompletion = useMemo(() => {
+    if (!profile) return 0;
+    const checks = [
+      Boolean(profile.displayName),
+      Boolean(profile.bio && profile.bio.trim()),
+      Boolean(profile.location?.city),
+      Array.isArray(profile.languages) && profile.languages.length > 0,
+      Number(profile.experience) > 0,
+      Array.isArray(profile.media) && profile.media.length > 0,
+    ];
+    const filled = checks.filter(Boolean).length;
+    return Math.round((filled / checks.length) * 100);
+  }, [profile]);
+
+  const displayName = profile?.displayName || user?.name || 'Artisan';
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '10px', color: 'var(--color-on-surface-variant)' }}>
+        <Loader2 size={20} className="spin" />
+        <span>Loading your studio dashboard…</span>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+      {error && (
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--color-error-container, #fdecea)',
+            color: 'var(--color-on-error-container, #611a15)',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <AlertTriangle size={18} />
+          {error}
+        </div>
+      )}
+
       {/* Welcome Hero Banner with Profile Completion */}
       <div
         style={{
@@ -48,11 +163,11 @@ export default function ArtisanOverview() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="font-headline-md" style={{ color: 'var(--color-on-surface)' }}>
-                Namaste, {ARTIST_PROFILE.name.split(' ')[1]} 👋
+                Namaste, {displayName} 👋
               </span>
             </div>
             <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: '4px' }}>
-              Welcome to your digital studio. You have <strong>{OVERVIEW_METRICS.requestsCount} pending requests</strong> and <strong>{OVERVIEW_METRICS.upcomingEventsCount} scheduled workshops</strong> this month.
+              Welcome to your digital studio. You have <strong>{pendingRequests.length} pending requests</strong> and <strong>{upcomingEvents.length} scheduled workshops</strong> coming up.
             </p>
           </div>
 
@@ -73,7 +188,7 @@ export default function ArtisanOverview() {
                 Profile Completion
               </span>
               <span className="font-label-md" style={{ color: 'var(--color-secondary)', fontWeight: 700 }}>
-                {OVERVIEW_METRICS.profileCompletion}%
+                {profileCompletion}%
               </span>
             </div>
             <div
@@ -87,7 +202,7 @@ export default function ArtisanOverview() {
             >
               <div
                 style={{
-                  width: `${OVERVIEW_METRICS.profileCompletion}%`,
+                  width: `${profileCompletion}%`,
                   height: '100%',
                   backgroundColor: 'var(--color-secondary)',
                   borderRadius: '9999px',
@@ -95,7 +210,7 @@ export default function ArtisanOverview() {
               />
             </div>
             <span style={{ fontSize: '10px', color: 'var(--color-on-surface-variant)' }}>
-              GI Tag &amp; Bank Account Linked
+              {profile?.verificationStatus === 'approved' ? 'Verified Artisan Profile' : 'Verification Pending'}
             </span>
           </div>
         </div>
@@ -129,7 +244,7 @@ export default function ArtisanOverview() {
             onClick={() => navigate('/dashboard/artisan/requests')}
           >
             <Inbox size={16} />
-            <span>View Requests ({OVERVIEW_METRICS.requestsCount})</span>
+            <span>View Requests ({pendingRequests.length})</span>
           </button>
           <button
             type="button"
@@ -137,7 +252,7 @@ export default function ArtisanOverview() {
             onClick={() => navigate('/dashboard/artisan/events')}
           >
             <Calendar size={16} />
-            <span>View Events ({OVERVIEW_METRICS.upcomingEventsCount})</span>
+            <span>View Events ({upcomingEvents.length})</span>
           </button>
           <button
             type="button"
@@ -145,12 +260,12 @@ export default function ArtisanOverview() {
             onClick={() => navigate('/dashboard/artisan/earnings')}
           >
             <Wallet size={16} />
-            <span>View Earnings ({OVERVIEW_METRICS.totalEarnings})</span>
+            <span>View Earnings ({formatINR(earnings?.totalEarnings)})</span>
           </button>
         </div>
       </div>
 
-      {/* VITAL METRICS: 4 Large High-Contrast Tactile Cards from artist.html */}
+      {/* VITAL METRICS */}
       <div
         style={{
           display: 'grid',
@@ -174,7 +289,7 @@ export default function ArtisanOverview() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                Direct Earnings / जमा रक्कम
+                Total Earnings
               </span>
               <div
                 style={{
@@ -192,10 +307,10 @@ export default function ArtisanOverview() {
               </div>
             </div>
             <div className="font-display-hero" style={{ color: 'var(--color-on-surface)' }}>
-              {OVERVIEW_METRICS.totalEarnings}
+              {formatINR(earnings?.totalEarnings)}
             </div>
             <p className="font-body-sm" style={{ color: 'var(--color-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-              <CheckCircle2 size={16} /> {OVERVIEW_METRICS.retainedPercent}
+              <CheckCircle2 size={16} /> {formatINR(earnings?.pendingEarnings)} pending
             </p>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
@@ -206,12 +321,12 @@ export default function ArtisanOverview() {
               style={{ width: '100%' }}
             >
               <Wallet size={16} />
-              <span>बँक खात्यात पाठवा (Withdraw to Bank)</span>
+              <span>View Earnings Ledger</span>
             </button>
           </div>
         </div>
 
-        {/* Card 2: Active Orders */}
+        {/* Card 2: Products in Catalog */}
         <div
           style={{
             display: 'flex',
@@ -226,7 +341,7 @@ export default function ArtisanOverview() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                Active Orders / पाठवायचे काम
+                Products in Catalog
               </span>
               <div
                 style={{
@@ -244,10 +359,10 @@ export default function ArtisanOverview() {
               </div>
             </div>
             <div className="font-display-hero" style={{ color: 'var(--color-on-surface)' }}>
-              08 <span className="font-title-md" style={{ fontWeight: 400, color: 'var(--color-on-surface-variant)' }}>Paintings</span>
+              {activeProducts.length} <span className="font-title-md" style={{ fontWeight: 400, color: 'var(--color-on-surface-variant)' }}>Listings</span>
             </div>
             <p className="font-body-sm" style={{ color: 'var(--color-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-              <Clock size={16} /> {OVERVIEW_METRICS.scheduledCouriers}
+              <Clock size={16} /> {products.length - activeProducts.length} archived
             </p>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
@@ -257,12 +372,12 @@ export default function ArtisanOverview() {
               onClick={() => navigate('/dashboard/artisan/products?tab=manage')}
               style={{ width: '100%' }}
             >
-              View Packing Slips
+              Manage Catalog
             </button>
           </div>
         </div>
 
-        {/* Card 3: Workshop Invites */}
+        {/* Card 3: Upcoming Events */}
         <div
           style={{
             display: 'flex',
@@ -277,7 +392,7 @@ export default function ArtisanOverview() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                Workshop Invites / कार्यशाळा
+                Upcoming Events
               </span>
               <div
                 style={{
@@ -295,25 +410,25 @@ export default function ArtisanOverview() {
               </div>
             </div>
             <div className="font-display-hero" style={{ color: 'var(--color-on-surface)' }}>
-              03 <span className="font-title-md" style={{ fontWeight: 400, color: 'var(--color-on-surface-variant)' }}>Invites</span>
+              {upcomingEvents.length} <span className="font-title-md" style={{ fontWeight: 400, color: 'var(--color-on-surface-variant)' }}>Scheduled</span>
             </div>
             <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)', marginTop: '4px' }}>
-              NGMA Delhi &amp; IIT Bombay Art Guild
+              {upcomingEvents[0]?.title || 'No upcoming events yet'}
             </p>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
             <button
               type="button"
               className="btn-surface"
-              onClick={() => navigate('/dashboard/artisan/requests?tab=institutions')}
+              onClick={() => navigate('/dashboard/artisan/events')}
               style={{ width: '100%' }}
             >
-              Review 3 Invitations
+              View Calendar
             </button>
           </div>
         </div>
 
-        {/* Card 4: Collectors & Followers */}
+        {/* Card 4: Followers */}
         <div
           style={{
             display: 'flex',
@@ -328,7 +443,7 @@ export default function ArtisanOverview() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                Collectors &amp; Lovers / चाहते
+                Collectors &amp; Followers
               </span>
               <div
                 style={{
@@ -346,10 +461,10 @@ export default function ArtisanOverview() {
               </div>
             </div>
             <div className="font-display-hero" style={{ color: 'var(--color-on-surface)' }}>
-              {OVERVIEW_METRICS.followersCount.toLocaleString()}
+              {followerCount.toLocaleString()}
             </div>
             <p className="font-body-sm" style={{ color: 'var(--color-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-              <TrendingUp size={16} /> {OVERVIEW_METRICS.recentFollowersAdded}
+              <TrendingUp size={16} /> Growing patron network
             </p>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
@@ -360,7 +475,7 @@ export default function ArtisanOverview() {
               style={{ width: '100%' }}
             >
               <Radio size={16} />
-              <span>Send Voice Update</span>
+              <span>View Followers</span>
             </button>
           </div>
         </div>
@@ -388,7 +503,7 @@ export default function ArtisanOverview() {
         >
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className="font-headline-sm" style={{ fontSize: '18px' }}>Recent Collector Inquiries</h2>
+              <h2 className="font-headline-sm" style={{ fontSize: '18px' }}>Recent Requests</h2>
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/artisan/requests')}
@@ -409,41 +524,42 @@ export default function ArtisanOverview() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {INDIVIDUAL_REQUESTS.slice(0, 2).map((req) => (
-                <div
-                  key={req.id}
-                  style={{
-                    padding: '12px',
-                    borderRadius: '0.75rem',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img
-                      src={req.avatar}
-                      alt={req.requesterName}
-                      style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-on-surface)' }}>
-                        {req.requesterName}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)' }}>
-                        {req.requestType} • <span style={{ fontWeight: 700 }}>{req.proposedAmount}</span>
+            {requests.length === 0 ? (
+              <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+                No requests yet.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {requests.slice(0, 2).map((req) => (
+                  <div
+                    key={req._id}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '0.75rem',
+                      backgroundColor: 'var(--color-surface-container-low)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-on-surface)' }}>
+                          {req.requesterId?.name || 'Unknown Requester'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)' }}>
+                          {req.title || req.eventType} • <span style={{ fontWeight: 700 }}>{formatINR(req.budget)}</span>
+                        </div>
                       </div>
                     </div>
+                    <span className="badge-secondary" style={{ fontSize: '10px', textTransform: 'capitalize' }}>
+                      {req.status}
+                    </span>
                   </div>
-                  <span className="badge-secondary" style={{ fontSize: '10px' }}>
-                    {req.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
@@ -470,7 +586,7 @@ export default function ArtisanOverview() {
         >
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className="font-headline-sm" style={{ fontSize: '18px' }}>Upcoming Workshops &amp; Expos</h2>
+              <h2 className="font-headline-sm" style={{ fontSize: '18px' }}>Upcoming Workshops &amp; Events</h2>
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/artisan/events')}
@@ -491,33 +607,39 @@ export default function ArtisanOverview() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {UPCOMING_EVENTS.slice(0, 2).map((evt) => (
-                <div
-                  key={evt.id}
-                  style={{
-                    padding: '12px',
-                    borderRadius: '0.75rem',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-on-surface)' }}>
-                      {evt.title}
-                    </span>
-                    <span className="badge-primary" style={{ fontSize: '10px' }}>
-                      {evt.status}
-                    </span>
+            {upcomingEvents.length === 0 ? (
+              <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+                No upcoming events scheduled.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {upcomingEvents.slice(0, 2).map((evt) => (
+                  <div
+                    key={evt._id}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '0.75rem',
+                      backgroundColor: 'var(--color-surface-container-low)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-on-surface)' }}>
+                        {evt.title}
+                      </span>
+                      <span className="badge-primary" style={{ fontSize: '10px', textTransform: 'capitalize' }}>
+                        {evt.status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)' }}>
+                      {new Date(evt.dateTime).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • {evt.location?.city || 'Location TBD'}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)' }}>
-                    {evt.date} • {evt.location}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
@@ -535,9 +657,9 @@ export default function ArtisanOverview() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="font-headline-sm">Paintings in Studio Catalog</h2>
+            <h2 className="font-headline-sm">Recent Studio Catalog</h2>
             <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-              Natural rice flour and geru earth canvases ready for collectors.
+              Your latest listed artworks ready for collectors.
             </p>
           </div>
           <button
@@ -550,83 +672,92 @@ export default function ArtisanOverview() {
           </button>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
-          {PRODUCTS_CATALOG.slice(0, 3).map((prod) => (
-            <div
-              key={prod.id}
-              style={{
-                borderRadius: '1rem',
-                backgroundColor: 'var(--color-surface-container-lowest)',
-                overflow: 'hidden',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <div style={{ position: 'relative', height: '180px' }}>
-                <ArtworkImage src={prod.image} alt={prod.title} style={{ width: '100%', height: '100%' }} />
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: '10px',
-                    padding: '3px 8px',
-                    borderRadius: '9999px',
-                    backgroundColor: 'rgba(251, 249, 243, 0.95)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                >
-                  {prod.stockStatus}
-                </span>
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--color-secondary)',
-                    color: 'var(--color-on-secondary)',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                >
-                  {prod.price}
-                </span>
-              </div>
-              <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <span className="font-label-caps" style={{ color: 'var(--color-outline)', fontSize: '10px' }}>
-                  {prod.medium} • {prod.dimensions}
-                </span>
-                <h3 className="font-title-md" style={{ color: 'var(--color-on-surface)' }}>
-                  {prod.title}
-                </h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <ShieldCheck size={14} /> GI Certified
-                  </span>
-                  <button
-                    type="button"
-                    className="btn-surface"
-                    onClick={() => navigate('/dashboard/artisan/products?tab=manage')}
-                    style={{ padding: '4px 10px', fontSize: '11px' }}
+        {activeProducts.length === 0 ? (
+          <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+            You haven't listed any products yet.
+          </p>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1.5rem',
+            }}
+          >
+            {activeProducts.slice(0, 3).map((prod) => (
+              <div
+                key={prod._id}
+                style={{
+                  borderRadius: '1rem',
+                  backgroundColor: 'var(--color-surface-container-lowest)',
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <div style={{ position: 'relative', height: '180px' }}>
+                  <ArtworkImage src={prod.images?.[0]?.url || prod.media?.[0]?.url} alt={prod.title} style={{ width: '100%', height: '100%' }} />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      left: '10px',
+                      padding: '3px 8px',
+                      borderRadius: '9999px',
+                      backgroundColor: 'rgba(251, 249, 243, 0.92)',
+                      backdropFilter: 'blur(4px)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-sans)',
+                      color: 'var(--color-on-surface)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    }}
                   >
-                    Manage
-                  </button>
+                    {prod.stock > 0 ? 'IN STOCK' : 'SOLD OUT'}
+                  </span>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--color-secondary)',
+                      color: 'var(--color-on-secondary)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {formatINR(prod.price)}
+                  </span>
+                </div>
+                <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span className="font-label-caps" style={{ color: 'var(--color-outline)', fontSize: '10px' }}>
+                    {prod.category}
+                  </span>
+                  <h3 className="font-title-md" style={{ color: 'var(--color-on-surface)' }}>
+                    {prod.title}
+                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <ShieldCheck size={14} /> {prod.moderationStatus === 'approved' ? 'Approved' : prod.moderationStatus}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-surface"
+                      onClick={() => navigate('/dashboard/artisan/products?tab=manage')}
+                      style={{ padding: '4px 10px', fontSize: '11px' }}
+                    >
+                      Manage
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

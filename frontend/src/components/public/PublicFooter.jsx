@@ -32,14 +32,8 @@ export default function PublicFooter() {
               </span>
             </div>
             <p className="font-body-md text-on-surface-variant mb-5 max-w-sm leading-relaxed">
-              An autonomous sanctuary and living archive stewarding Indian tribal and folk idioms. Anchored in generational provenance, fair remuneration, and direct artisan agency.
+              A living archive stewarding Indian tribal and folk idioms, connecting patrons directly with verified artisans.
             </p>
-            <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
-              <span className="font-label-md text-on-surface font-semibold">
-                Artisan Support Fund: 88.4% Disbursed Directly
-              </span>
-            </div>
           </div>
 
           {/* Col 2: Geographical Heritage Index */}
@@ -134,7 +128,7 @@ export default function PublicFooter() {
         {/* Bottom Legal bar */}
         <div className="pt-6 border-t border-outline-variant/30 flex flex-col md:flex-row items-center justify-between gap-4 font-body-sm text-outline">
           <div>
-            © 2024 Tvarita Living Indigenous Arts Foundation. Non-Profit Trust Registered under Section 12A.
+            © 2026 Tvarita.
           </div>
           <div className="flex flex-wrap items-center gap-4 font-label-md">
             <a href="#terms" className="hover:text-on-surface transition-colors">

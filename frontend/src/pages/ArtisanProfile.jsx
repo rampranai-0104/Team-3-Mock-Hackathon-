@@ -1,32 +1,147 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Phone,
   ShieldCheck,
-  Award,
   MapPin,
   Brush,
   CheckCircle2,
   Edit3,
   Save,
-  RefreshCw,
+  Loader2,
+  AlertTriangle,
+  Trash2,
+  UploadCloud,
 } from 'lucide-react';
-import { ARTIST_PROFILE } from '../data/artisanMockData';
+import artisanService from '../services/artisanService';
 
 export default function ArtisanProfile() {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({ ...ARTIST_PROFILE });
+  const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    setIsEditing(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const [form, setForm] = useState({
+    displayName: '',
+    bio: '',
+    city: '',
+    state: '',
+    country: '',
+    languages: '',
+    experience: '',
+  });
+
+  const loadProfile = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await artisanService.getProfile();
+      const data = res?.data || null;
+      setProfile(data);
+      if (data) {
+        setForm({
+          displayName: data.displayName || '',
+          bio: data.bio || '',
+          city: data.location?.city || '',
+          state: data.location?.state || '',
+          country: data.location?.country || 'India',
+          languages: (data.languages || []).join(', '),
+          experience: data.experience ?? '',
+        });
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load your profile.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await artisanService.updateProfile({
+        displayName: form.displayName.trim(),
+        bio: form.bio,
+        location: { city: form.city, state: form.state, country: form.country },
+        languages: form.languages.split(',').map((l) => l.trim()).filter(Boolean),
+        experience: Number(form.experience) || 0,
+      });
+      setIsEditing(false);
+      setSaveSuccess(true);
+      await loadProfile();
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      alert(`Could not save profile: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMediaUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingMedia(true);
+    try {
+      await artisanService.uploadMedia(file);
+      await loadProfile();
+    } catch (err) {
+      alert(`Could not upload media: ${err.message}`);
+    } finally {
+      setUploadingMedia(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleMediaDelete = async (mediaId) => {
+    if (!window.confirm('Remove this media item from your profile?')) return;
+    try {
+      await artisanService.deleteMedia(mediaId);
+      await loadProfile();
+    } catch (err) {
+      alert(`Could not delete media: ${err.message}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '10px', color: 'var(--color-on-surface-variant)' }}>
+        <Loader2 size={20} className="spin" />
+        <span>Loading your profile…</span>
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div
+        style={{
+          padding: '12px 16px',
+          borderRadius: '0.75rem',
+          backgroundColor: 'var(--color-error-container, #fdecea)',
+          color: 'var(--color-on-error-container, #611a15)',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <AlertTriangle size={18} />
+        {error}
+      </div>
+    );
+  }
+
+  const user = profile?.userId || {};
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
-      {/* Master Artisan Hero Card from artist.html */}
+      {/* Hero Card */}
       <div
         style={{
           position: 'relative',
@@ -39,54 +154,34 @@ export default function ArtisanProfile() {
       >
         <div
           style={{
-            position: 'absolute',
-            right: '-4rem',
-            top: '-4rem',
-            width: '20rem',
-            height: '20rem',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 219, 207, 0.3)',
-            filter: 'blur(3rem)',
-            pointerEvents: 'none',
-          }}
-        />
-
-        <div
-          style={{
             position: 'relative',
             display: 'flex',
-            flexDirection: 'column',
+            flexWrap: 'wrap',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
             gap: '1.5rem',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: '1.5rem',
-            }}
-          >
-            {/* Portrait & Core Credentials */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.5rem' }}>
-              <div
-                style={{
-                  position: 'relative',
-                  width: '120px',
-                  height: '120px',
-                  borderRadius: '1rem',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-                  flexShrink: 0,
-                  backgroundColor: 'var(--color-surface-container-highest)',
-                }}
-              >
-                <img
-                  src={profileData.avatar}
-                  alt={profileData.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.5rem' }}>
+            <div
+              style={{
+                position: 'relative',
+                width: '120px',
+                height: '120px',
+                borderRadius: '1rem',
+                overflow: 'hidden',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+                flexShrink: 0,
+                backgroundColor: 'var(--color-surface-container-highest)',
+              }}
+            >
+              <img
+                src={profile?.profileImage || user?.avatar || ''}
+                alt={profile?.displayName || user?.name || 'Artist'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              {profile?.verificationStatus === 'approved' && (
                 <div
                   style={{
                     position: 'absolute',
@@ -97,114 +192,54 @@ export default function ArtisanProfile() {
                     borderRadius: '50%',
                     padding: '4px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                   }}
-                  title="GI Tagged & National Heritage Certified"
+                  title="Verified Artist"
                 >
                   <ShieldCheck size={14} />
                 </div>
-              </div>
+              )}
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
-                  <span className="badge-secondary">{profileData.awards[0]}</span>
-                  <span className="badge-tertiary">{profileData.giRegistration}</span>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '12px',
-                      color: 'var(--color-secondary)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: 'var(--color-secondary)',
-                      }}
-                    />
-                    {profileData.phoneStatus} ({profileData.phone})
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <span
+                className="badge-secondary"
+                style={{ textTransform: 'capitalize', width: 'fit-content' }}
+              >
+                {profile?.verificationStatus || 'pending'}
+              </span>
+
+              <h1 className="font-headline-md" style={{ color: 'var(--color-on-surface)', marginTop: '2px' }}>
+                {profile?.displayName || user?.name || 'Unnamed Artisan'}
+              </h1>
+              <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', maxWidth: '650px' }}>
+                {user?.email} {user?.phone ? `• ${user.phone}` : ''}
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem', paddingTop: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-outline)', fontSize: '13px' }}>
+                  <MapPin size={16} />
+                  <span>
+                    {[profile?.location?.city, profile?.location?.state, profile?.location?.country]
+                      .filter(Boolean)
+                      .join(', ') || 'Location not set'}
                   </span>
                 </div>
-
-                <h1 className="font-headline-md" style={{ color: 'var(--color-on-surface)', marginTop: '2px' }}>
-                  {profileData.name}
-                </h1>
-                <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', maxWidth: '650px' }}>
-                  {profileData.title} • {profileData.location}
-                </p>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem', paddingTop: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-outline)', fontSize: '13px' }}>
-                    <MapPin size={16} />
-                    <span>Ganjad Village Studio, Dahanu</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-outline)', fontSize: '13px' }}>
-                    <Award size={16} />
-                    <span>{profileData.mentorRole}</span>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-outline)', fontSize: '13px' }}>
+                  <Brush size={16} />
+                  <span>{profile?.experience || 0} years of experience</span>
                 </div>
               </div>
-            </div>
-
-            {/* Quick Action: Studio Coordinator Emergency Call & Edit Button */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '220px' }}>
-              <a
-                href="tel:+918001234567"
-                className="btn-primary"
-                style={{
-                  padding: '12px 18px',
-                  borderRadius: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <Phone size={22} />
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9 }}>
-                    Helpdesk / सहाय्यक कक्ष
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 700 }}>Call Studio Coordinator</div>
-                </div>
-              </a>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  borderRadius: '0.75rem',
-                  backgroundColor: 'var(--color-surface-container)',
-                  fontSize: '12px',
-                  color: 'var(--color-on-surface-variant)',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <RefreshCw size={14} color="var(--color-secondary)" />
-                  Synced 4 mins ago
-                </span>
-                <span style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>SMS Mode: ON</span>
-              </div>
-
-              <button
-                type="button"
-                className="btn-surface"
-                onClick={() => setIsEditing(!isEditing)}
-                style={{ width: '100%' }}
-              >
-                <Edit3 size={15} />
-                <span>{isEditing ? 'Cancel Editing' : 'Edit Profile Information'}</span>
-              </button>
             </div>
           </div>
+
+          <button
+            type="button"
+            className="btn-surface"
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            <Edit3 size={15} />
+            <span>{isEditing ? 'Cancel Editing' : 'Edit Profile'}</span>
+          </button>
         </div>
       </div>
 
@@ -222,135 +257,30 @@ export default function ArtisanProfile() {
           }}
         >
           <CheckCircle2 size={18} />
-          Profile changes have been successfully saved to your Studio Ledger!
+          Profile changes have been saved.
         </div>
       )}
 
-      {/* Profile Details Sections (Editable Form or Read-only Display) */}
-      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Section 1: Personal Information */}
+      {error && profile && (
         <div
           style={{
-            backgroundColor: 'var(--color-surface-container-lowest)',
-            padding: '1.5rem',
-            borderRadius: '1.25rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            padding: '12px 16px',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--color-error-container, #fdecea)',
+            color: 'var(--color-on-error-container, #611a15)',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-            <span style={{ color: 'var(--color-primary)' }}><Award size={20} /></span>
-            <h2 className="font-title-lg">१. Personal Information / वैयक्तिक माहिती</h2>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '1.25rem',
-            }}
-          >
-            <div>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Full Name
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--color-outline-variant)',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                />
-              ) : (
-                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profileData.name}</div>
-              )}
-            </div>
-
-            <div>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Date of Birth
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.dob}
-                  onChange={(e) => setProfileData({ ...profileData, dob: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--color-outline-variant)',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                />
-              ) : (
-                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profileData.dob}</div>
-              )}
-            </div>
-
-            <div>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Phone Number (SMS Linked)
-              </label>
-              <div style={{ fontWeight: 600, fontSize: '15px' }}>{profileData.phone}</div>
-            </div>
-
-            <div>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Studio Contact Email
-              </label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--color-outline-variant)',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                />
-              ) : (
-                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profileData.email}</div>
-              )}
-            </div>
-
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Studio Physical Location
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.location}
-                  onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--color-outline-variant)',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                />
-              ) : (
-                <div style={{ fontSize: '14px', color: 'var(--color-on-surface-variant)' }}>{profileData.location}</div>
-              )}
-            </div>
-          </div>
+          <AlertTriangle size={18} />
+          {error}
         </div>
+      )}
 
-        {/* Section 2: Art Information & Lineage */}
+      {/* Editable / Read-only Section */}
+      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div
           style={{
             backgroundColor: 'var(--color-surface-container-lowest)',
@@ -359,10 +289,7 @@ export default function ArtisanProfile() {
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-            <span style={{ color: 'var(--color-secondary)' }}><Brush size={20} /></span>
-            <h2 className="font-title-lg">२. Art Information &amp; Heritage Lineage / कला परंपरा</h2>
-          </div>
+          <h2 className="font-title-lg" style={{ marginBottom: '1rem' }}>Studio Information</h2>
 
           <div
             style={{
@@ -373,91 +300,115 @@ export default function ArtisanProfile() {
           >
             <div>
               <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Art Form &amp; Tradition
+                Display Name
               </label>
-              <div style={{ fontWeight: 600, fontSize: '15px' }}>Authentic Warli Tribal Painting</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={form.displayName}
+                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '0.5rem', border: '1px solid var(--color-outline-variant)', backgroundColor: 'var(--color-surface-container-low)' }}
+                />
+              ) : (
+                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profile?.displayName}</div>
+              )}
             </div>
 
             <div>
               <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Years of Master Experience
+                Years of Experience
               </label>
-              <div style={{ fontWeight: 600, fontSize: '15px' }}>{profileData.experienceYears} Years</div>
+              {isEditing ? (
+                <input
+                  type="number"
+                  min="0"
+                  value={form.experience}
+                  onChange={(e) => setForm({ ...form, experience: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '0.5rem', border: '1px solid var(--color-outline-variant)', backgroundColor: 'var(--color-surface-container-low)' }}
+                />
+              ) : (
+                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profile?.experience || 0} years</div>
+              )}
             </div>
 
             <div>
               <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Lineage / पीढी
+                City
               </label>
-              <div style={{ fontWeight: 600, fontSize: '15px' }}>{profileData.lineage}</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '0.5rem', border: '1px solid var(--color-outline-variant)', backgroundColor: 'var(--color-surface-container-low)' }}
+                />
+              ) : (
+                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profile?.location?.city || '—'}</div>
+              )}
             </div>
 
             <div>
               <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Spoken Languages
+                State
               </label>
-              <div style={{ fontSize: '14px' }}>{profileData.languages.join(' • ')}</div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={form.state}
+                  onChange={(e) => setForm({ ...form, state: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '0.5rem', border: '1px solid var(--color-outline-variant)', backgroundColor: 'var(--color-surface-container-low)' }}
+                />
+              ) : (
+                <div style={{ fontWeight: 600, fontSize: '15px' }}>{profile?.location?.state || '—'}</div>
+              )}
+            </div>
+
+            <div>
+              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
+                Spoken Languages (comma separated)
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={form.languages}
+                  onChange={(e) => setForm({ ...form, languages: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '0.5rem', border: '1px solid var(--color-outline-variant)', backgroundColor: 'var(--color-surface-container-low)' }}
+                />
+              ) : (
+                <div style={{ fontSize: '14px' }}>{(profile?.languages || []).join(' • ') || '—'}</div>
+              )}
+            </div>
+
+            <div>
+              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
+                Art Forms
+              </label>
+              <div style={{ fontSize: '14px' }}>
+                {(profile?.artFormIds || []).map((af) => af.name).join(', ') || 'Not assigned yet'}
+              </div>
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
               <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Artisan Biography
+                Biography
               </label>
               {isEditing ? (
                 <textarea
                   rows={4}
-                  value={profileData.bio}
-                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--color-outline-variant)',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    fontFamily: 'var(--font-sans)',
-                  }}
+                  value={form.bio}
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '0.5rem', border: '1px solid var(--color-outline-variant)', backgroundColor: 'var(--color-surface-container-low)', fontFamily: 'var(--font-sans)' }}
                 />
               ) : (
                 <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  {profileData.bio}
+                  {profile?.bio || 'No biography added yet.'}
                 </p>
               )}
-            </div>
-
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Sacred Cultural Significance
-              </label>
-              <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-                {profileData.culturalSignificance}
-              </p>
-            </div>
-
-            <div>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Natural Materials Used
-              </label>
-              <ul style={{ paddingLeft: '1.25rem', fontSize: '13px', color: 'var(--color-on-surface-variant)', lineHeight: '1.6' }}>
-                {profileData.materials.map((m, i) => (
-                  <li key={i}>{m}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <label className="font-label-caps" style={{ color: 'var(--color-outline)', display: 'block', marginBottom: '4px' }}>
-                Ancestral Techniques
-              </label>
-              <ul style={{ paddingLeft: '1.25rem', fontSize: '13px', color: 'var(--color-on-surface-variant)', lineHeight: '1.6' }}>
-                {profileData.techniques.map((t, i) => (
-                  <li key={i}>{t}</li>
-                ))}
-              </ul>
             </div>
           </div>
         </div>
 
-        {/* Section 3: Heritage, Awards & Certifications */}
+        {/* Media Gallery */}
         <div
           style={{
             backgroundColor: 'var(--color-surface-container-lowest)',
@@ -466,72 +417,59 @@ export default function ArtisanProfile() {
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-            <span style={{ color: 'var(--color-primary)' }}><ShieldCheck size={20} /></span>
-            <h2 className="font-title-lg">३. Heritage &amp; Authenticity Certifications / कायदेशीर प्रमाणीकरण</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 className="font-title-lg">Profile Media Gallery</h2>
+            <label className="btn-surface" style={{ cursor: 'pointer' }}>
+              <UploadCloud size={16} />
+              <span>{uploadingMedia ? 'Uploading…' : 'Upload Media'}</span>
+              <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} disabled={uploadingMedia} style={{ display: 'none' }} />
+            </label>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '1.25rem',
-            }}
-          >
-            <div style={{ padding: '12px', borderRadius: '0.75rem', backgroundColor: 'var(--color-surface-container-low)' }}>
-              <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                Geographical Indication (GI) Status
-              </span>
-              <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-secondary)', marginTop: '4px' }}>
-                Registered Producer ({profileData.giRegistration})
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-                Protected under Geographical Indications of Goods Act (Govt. of India)
-              </p>
+          {(profile?.media || []).length === 0 ? (
+            <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)' }}>No media uploaded yet.</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
+              {profile.media.map((m) => (
+                <div key={m._id} style={{ position: 'relative', borderRadius: '0.75rem', overflow: 'hidden', height: '120px', backgroundColor: 'var(--color-surface-container-high)' }}>
+                  {m.type === 'video' ? (
+                    <video src={m.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                  ) : (
+                    <img src={m.url} alt={m.title || 'Media'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleMediaDelete(m._id)}
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      padding: '4px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                    }}
+                    title="Remove media"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
-
-            <div style={{ padding: '12px', borderRadius: '0.75rem', backgroundColor: 'var(--color-surface-container-low)' }}>
-              <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                National &amp; State Honors
-              </span>
-              <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-primary)', marginTop: '4px' }}>
-                {profileData.awards.join(' • ')}
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-                Conferred for tribal conservation and excellence in living folk forms
-              </p>
-            </div>
-
-            <div style={{ padding: '12px', borderRadius: '0.75rem', backgroundColor: 'var(--color-surface-container-low)' }}>
-              <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                Folk Guild Trust Affiliation
-              </span>
-              <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-on-surface)', marginTop: '4px' }}>
-                {profileData.guild}
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-                Elder status with collective voting rights on tribal royalty disbursals
-              </p>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Action Buttons for Edit/Save */}
         {isEditing && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-            <button
-              type="button"
-              className="btn-surface"
-              onClick={() => setIsEditing(false)}
-            >
+            <button type="button" className="btn-surface" onClick={() => setIsEditing(false)}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="btn-primary"
-            >
-              <Save size={16} />
-              <span>Save Changes / बदल सेव्ह करा</span>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
+              <span>{saving ? 'Saving…' : 'Save Changes'}</span>
             </button>
           </div>
         )}

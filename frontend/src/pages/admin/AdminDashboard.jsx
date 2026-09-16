@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import SystemBanner from '../../components/admin/SystemBanner';
+import React, { useState, useEffect } from 'react';
 import AdminKpiSection from '../../components/admin/AdminKpiSection';
 import VerificationQueue from '../../components/admin/VerificationQueue';
 import TaxonomyTree from '../../components/admin/TaxonomyTree';
 import BookingLedger from '../../components/admin/BookingLedger';
 import MarketplaceAudit from '../../components/admin/MarketplaceAudit';
 import AnalyticsVisualizations from '../../components/admin/AnalyticsVisualizations';
+import adminService from '../../services/adminService';
 import {
   UserCheck,
   Layers,
@@ -16,20 +16,29 @@ import {
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('queue');
+  const [pendingCount, setPendingCount] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    adminService.getDashboardStats()
+      .then((res) => {
+        const data = res?.data || res;
+        if (mounted) setPendingCount(data?.pendingArtistVerifications ?? null);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const tabs = [
-    { id: 'queue', label: 'Artisan Verification Queue', count: 5, icon: UserCheck },
+    { id: 'queue', label: 'Artist Verification Queue', count: pendingCount, icon: UserCheck },
     { id: 'taxonomy', label: 'Cultural Taxonomy Tree', count: null, icon: Layers },
-    { id: 'bookings', label: 'Institutional Bookings Ledger', count: null, icon: Handshake },
+    { id: 'bookings', label: 'Bookings Ledger', count: null, icon: Handshake },
     { id: 'marketplace', label: 'Marketplace Curation Audit', count: null, icon: CheckCircle },
     { id: 'analytics', label: 'Analytical Visualizations', count: null, icon: BarChart3 },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
-      {/* Top Operational Banner & System Header from admin.html */}
-      <SystemBanner />
-
       {/* Macro Impact KPIs: High Editorial Plinths */}
       <AdminKpiSection />
 

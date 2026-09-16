@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminManagementView from '../../components/admin/AdminManagementView';
 import BookingLedger from '../../components/admin/BookingLedger';
-import { ADMIN_EVENTS_LIST } from '../../data/adminMockData';
-import { Calendar, Building, Handshake, CheckCircle2, X } from 'lucide-react';
+import adminService from '../../services/adminService';
+import { Calendar, Handshake, CheckCircle2, X, Loader2 } from 'lucide-react';
+
+const STATUS_STYLE = {
+  draft: { bg: 'var(--color-surface-container)', color: 'var(--color-on-surface)' },
+  pending_approval: { bg: 'var(--color-surface-container-highest)', color: 'var(--color-on-surface-variant)' },
+  published: { bg: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' },
+  ongoing: { bg: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' },
+  completed: { bg: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' },
+  cancelled: { bg: 'var(--color-primary-container)', color: 'var(--color-on-primary-container)' },
+};
 
 /**
- * AdminEventsPage - Core Feature 3: Events Module
- * Encompasses Events, Exhibitions, Workshops, Masterclasses, Institutional Residencies & Escrow.
+ * AdminEventsPage - Events Module
+ * Wired to real backend: GET/POST/PATCH/DELETE /api/admin/events
  */
 export default function AdminEventsPage() {
-  const [activeTab, setActiveTab] = useState('events'); // 'events' | 'residencies' | 'escrow'
-  const [events, setEvents] = useState(ADMIN_EVENTS_LIST);
+  const [activeTab, setActiveTab] = useState('events'); // 'events' | 'escrow'
+  const [events, setEvents] = useState([]);
+  const [artistOptions, setArtistOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [modalMode, setModalMode] = useState(null); // 'create' | 'edit' | 'assign' | 'participants'
+  const [modalMode, setModalMode] = useState(null); // 'create' | 'edit'
+  const [formData, setFormData] = useState({});
+  const [saving, setSaving] = useState(false);
   const [actionNotice, setActionNotice] = useState(null);
 
   const showNotice = (msg) => {
@@ -20,522 +34,340 @@ export default function AdminEventsPage() {
     setTimeout(() => setActionNotice(null), 3500);
   };
 
-  const handleApproveEvent = (row) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === row.id ? { ...e, status: 'Confirmed' } : e))
-    );
-    showNotice(`Event "${row.title}" approved and scheduled.`);
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminService.getEvents({ limit: 100 });
+      const data = res?.data || res;
+      setEvents(Array.isArray(data?.events) ? data.events : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load events.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchArtistOptions = useCallback(async () => {
+    try {
+      const res = await adminService.getArtists({ limit: 100, verificationStatus: 'approved' });
+      const data = res?.data || res;
+      setArtistOptions(Array.isArray(data?.artists) ? data.artists : []);
+    } catch (err) {
+      // Non-blocking: artist dropdown will simply be empty
+      console.error('Failed to load artists for event assignment:', err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchArtistOptions();
+  }, [fetchEvents, fetchArtistOptions]);
+
+  const openCreate = () => {
+    setSelectedEvent(null);
+    setFormData({
+      title: '', type: 'workshop', artistIds: [], description: '',
+      dateTime: '', durationMinutes: 60, city: '', capacity: 20, price: 0, status: 'published',
+    });
+    setModalMode('create');
   };
 
-  const handleCancelEvent = (row) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === row.id ? { ...e, status: 'Cancelled' } : e))
-    );
-    showNotice(`Event "${row.title}" has been cancelled.`);
+  const openEdit = (row) => {
+    setSelectedEvent(row);
+    setFormData({
+      title: row.title || '',
+      type: row.type || 'workshop',
+      artistIds: (row.artistIds || []).map((a) => a._id),
+      description: row.description || '',
+      dateTime: row.dateTime ? new Date(row.dateTime).toISOString().slice(0, 16) : '',
+      durationMinutes: row.durationMinutes || 60,
+      city: row.location?.city || '',
+      capacity: row.capacity || 20,
+      price: row.price || 0,
+      status: row.status || 'published',
+    });
+    setModalMode('edit');
+  };
+
+  const handleModerate = async (row, status) => {
+    try {
+      const res = await adminService.moderateEvent(row._id, status);
+      const updated = res?.data || res;
+      setEvents((prev) => prev.map((e) => (e._id === row._id ? { ...e, ...updated } : e)));
+      showNotice(`Event "${row.title}" status changed to ${status}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update event status.');
+    }
+  };
+
+  const handleDelete = async (row) => {
+    if (!window.confirm(`Delete or cancel event "${row.title}"?`)) return;
+    try {
+      const res = await adminService.deleteEvent(row._id);
+      const data = res?.data || res;
+      if (data?.status === 'cancelled') {
+        setEvents((prev) => prev.map((e) => (e._id === row._id ? { ...e, status: 'cancelled' } : e)));
+        showNotice(`Event "${row.title}" has active bookings and was cancelled.`);
+      } else {
+        setEvents((prev) => prev.filter((e) => e._id !== row._id));
+        showNotice(`Event "${row.title}" deleted.`);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete event.');
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        title: formData.title,
+        type: formData.type,
+        artistIds: formData.artistIds,
+        description: formData.description,
+        dateTime: formData.dateTime ? new Date(formData.dateTime).toISOString() : undefined,
+        durationMinutes: Number(formData.durationMinutes) || 60,
+        location: { city: formData.city },
+        capacity: Number(formData.capacity) || 1,
+        price: Number(formData.price) || 0,
+        status: formData.status,
+      };
+
+      if (modalMode === 'create') {
+        const res = await adminService.createEvent(payload);
+        const created = res?.data || res;
+        setEvents((prev) => [created, ...prev]);
+        showNotice(`Event "${formData.title}" created.`);
+      } else if (modalMode === 'edit' && selectedEvent) {
+        const res = await adminService.updateEvent(selectedEvent._id, payload);
+        const updated = res?.data || res;
+        setEvents((prev) => prev.map((e) => (e._id === selectedEvent._id ? { ...e, ...updated } : e)));
+        showNotice(`Saved changes for "${formData.title}".`);
+      }
+      setSelectedEvent(null);
+      setModalMode(null);
+    } catch (err) {
+      setError(err.message || 'Failed to save event.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const columns = [
     {
-      header: 'Event & Module',
+      header: 'Event',
       accessor: (row) => (
         <div>
           <div style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>{row.title}</div>
-          <div style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)' }}>Organizer: {row.organizer}</div>
+          <div style={{ fontSize: '11px', color: 'var(--color-on-surface-variant)', textTransform: 'capitalize' }}>{row.type}</div>
         </div>
       ),
     },
     {
-      header: 'Lead Master Artisan',
-      accessor: (row) => (
-        <span className="badge-editorial" style={{ backgroundColor: 'var(--color-surface-container)', color: 'var(--color-on-surface)' }}>
-          {row.artist}
-        </span>
-      ),
+      header: 'Artists',
+      accessor: (row) => (row.artistIds || []).map((a) => a?.displayName).filter(Boolean).join(', ') || '—',
     },
     {
-      header: 'Location / Venue',
-      accessor: 'location',
+      header: 'Location',
+      accessor: (row) => row.location?.city || '—',
     },
     {
-      header: 'Schedule Dates',
-      accessor: 'date',
+      header: 'Date',
+      accessor: (row) => (row.dateTime ? new Date(row.dateTime).toLocaleDateString() : '—'),
     },
     {
-      header: 'Cohort Size',
-      accessor: (row) => (
-        <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
-          {row.participants}
-        </span>
-      ),
+      header: 'Seats',
+      accessor: (row) => `${row.bookedCount || 0}/${row.capacity}`,
     },
     {
       header: 'Status',
-      accessor: (row) => (
-        <span
-          className="badge-editorial"
-          style={{
-            backgroundColor:
-              row.status === 'Confirmed'
-                ? 'var(--color-secondary-container)'
-                : row.status === 'Cancelled'
-                ? 'var(--color-primary-container)'
-                : 'var(--color-surface-container)',
-            color:
-              row.status === 'Confirmed'
-                ? 'var(--color-on-secondary-container)'
-                : row.status === 'Cancelled'
-                ? 'var(--color-on-primary-container)'
-                : 'var(--color-on-surface)',
-          }}
-        >
-          {row.status}
-        </span>
-      ),
+      accessor: (row) => {
+        const s = STATUS_STYLE[row.status] || STATUS_STYLE.draft;
+        return (
+          <span className="badge-editorial" style={{ backgroundColor: s.bg, color: s.color, textTransform: 'capitalize' }}>
+            {row.status?.replace('_', ' ')}
+          </span>
+        );
+      },
     },
   ];
 
   const actions = [
-    {
-      label: 'Edit',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedEvent(row);
-        setModalMode('edit');
-      },
-    },
-    {
-      label: 'Assign Artist',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedEvent(row);
-        setModalMode('assign');
-      },
-    },
-    {
-      label: 'Participants',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedEvent(row);
-        setModalMode('participants');
-      },
-    },
-    {
-      label: 'Approve',
-      variant: 'primary',
-      onClick: handleApproveEvent,
-    },
-    {
-      label: 'Cancel',
-      variant: 'surface',
-      onClick: handleCancelEvent,
-    },
+    { label: 'Edit', variant: 'surface', onClick: openEdit },
+    { label: 'Publish', variant: 'primary', onClick: (row) => handleModerate(row, 'published') },
+    { label: 'Cancel', variant: 'surface', onClick: (row) => handleModerate(row, 'cancelled') },
+    { label: 'Delete', variant: 'surface', onClick: handleDelete },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-      {/* Header & Feature Context */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
         <div>
           <h1 className="font-headline-sm" style={{ color: 'var(--color-on-surface)' }}>
-            Events, Exhibitions & Institutional Masterclasses
+            Events & Workshops
           </h1>
           <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-            Living Heritage Workshops, Corporate Residencies, Museum Loans & Smart Escrow Clearances
+            Workshops, masterclasses, exhibitions, and institutional bookings
           </p>
         </div>
 
-        {/* Tab Selector */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: 'var(--color-surface-container-low)',
-            borderRadius: '9999px',
-            padding: '4px',
-            gap: '4px',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('events')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'events' ? 700 : 500,
-              backgroundColor: activeTab === 'events' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'events' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Calendar size={16} />
-            <span>All Events & Workshops</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('residencies')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'residencies' ? 700 : 500,
-              backgroundColor: activeTab === 'residencies' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'residencies' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Building size={16} />
-            <span>Exhibitions & Residencies</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('escrow')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'escrow' ? 700 : 500,
-              backgroundColor: activeTab === 'escrow' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'escrow' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Handshake size={16} />
-            <span>Institutional Escrow (₹42.5L)</span>
-          </button>
+        <div style={{ display: 'flex', backgroundColor: 'var(--color-surface-container-low)', borderRadius: '9999px', padding: '4px', gap: '4px' }}>
+          <TabButton active={activeTab === 'events'} onClick={() => setActiveTab('events')} icon={<Calendar size={16} />} label="All Events" />
+          <TabButton active={activeTab === 'escrow'} onClick={() => setActiveTab('escrow')} icon={<Handshake size={16} />} label="Bookings Ledger" />
         </div>
       </div>
 
       {actionNotice && (
-        <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: '0.75rem',
-            backgroundColor: 'var(--color-secondary-container)',
-            color: 'var(--color-on-secondary-container)',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
+        <div style={{ padding: '12px 16px', borderRadius: '0.75rem', backgroundColor: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <CheckCircle2 size={18} />
           {actionNotice}
         </div>
       )}
 
-      {/* Tab 1: All Events & Workshops */}
+      {error && (
+        <div style={{ padding: '10px 14px', borderRadius: '0.75rem', backgroundColor: 'var(--color-primary-container)', color: 'var(--color-on-primary-container)', fontSize: '13px' }}>
+          {error}
+        </div>
+      )}
+
       {activeTab === 'events' && (
-        <AdminManagementView
-          title="Scheduled Masterclasses & Workshops"
-          subtitle="Living Heritage Sessions, Master Artisan Assignments & Participant Registrations"
-          data={events}
-          columns={columns}
-          actions={actions}
-          searchPlaceholder="Search events by title, organizer, artist, or venue..."
-          filterKey="status"
-          filterOptions={['Confirmed', 'Scheduled', 'Cancelled']}
-          addLabel="Create Event"
-          onAdd={() => {
-            setSelectedEvent({
-              title: '',
-              artist: '',
-              organizer: '',
-              location: '',
-              date: '',
-              participants: '',
-              status: 'Scheduled',
-            });
-            setModalMode('create');
-          }}
-        />
-      )}
-
-      {/* Tab 2: Exhibitions & Institutional Residencies */}
-      {activeTab === 'residencies' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              padding: '1.5rem',
-              borderRadius: '1rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <h3 className="font-headline-sm" style={{ fontSize: '20px', color: 'var(--color-on-surface)', marginBottom: '4px' }}>
-              Institutional Exhibitions & Corporate Residencies
-            </h3>
-            <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', fontSize: '13px' }}>
-              Museum partnerships, tech campus cultural hubs, and public festival pavilions with full artist accommodation & material grants.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
-              {[
-                {
-                  id: 'RES-01',
-                  title: 'National Gallery of Modern Art (NGMA) Residency',
-                  host: 'NGMA New Delhi',
-                  dates: 'Oct 14 - 18, 2025',
-                  artisan: 'Master Bhaskar Chitrakar',
-                  cohort: '24 Curatorial Scholars',
-                  grant: '₹4,50,000 Fully Escrowed',
-                  status: 'Active Now',
-                },
-                {
-                  id: 'RES-02',
-                  title: 'Google India Heritage Campus Residency',
-                  host: 'Google India Heritage Labs (Bengaluru)',
-                  dates: 'Oct 28 - 30, 2025',
-                  artisan: 'Mayur Vayeda & Ganjad Collective',
-                  cohort: '240 Tech Participants',
-                  grant: '₹6,50,000 Milestone 2 Approved',
-                  status: 'Confirmed',
-                },
-                {
-                  id: 'RES-03',
-                  title: 'Kala Ghoda Living Heritage Pavilion',
-                  host: 'Mumbai Heritage Arts Trust',
-                  dates: 'Nov 12 - 16, 2025',
-                  artisan: 'Anand Singh Shyam & Warli Elders',
-                  cohort: 'Public Walk-in Exhibition',
-                  grant: '₹5,20,000 Civic Trust Grant',
-                  status: 'Scheduled',
-                },
-              ].map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    padding: '1.25rem',
-                    borderRadius: '1rem',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    border: '1px solid var(--color-surface-container-high)',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="badge-editorial" style={{ backgroundColor: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' }}>
-                        {item.status}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--color-outline)' }}>
-                        {item.id}
-                      </span>
-                    </div>
-
-                    <h4 className="font-headline-sm" style={{ fontSize: '17px', marginTop: '8px', color: 'var(--color-on-surface)' }}>
-                      {item.title}
-                    </h4>
-
-                    <div style={{ fontSize: '12px', color: 'var(--color-outline)', marginTop: '2px' }}>
-                      Host: {item.host} • {item.dates}
-                    </div>
-
-                    <div style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', marginTop: '8px', lineHeight: 1.5 }}>
-                      <div><strong>Lead Artist: </strong> {item.artisan}</div>
-                      <div><strong>Cohort: </strong> {item.cohort}</div>
-                      <div><strong>Honorarium Grant: </strong> <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{item.grant}</span></div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', paddingTop: '0.75rem', borderTop: '1px solid var(--color-surface-container)' }}>
-                    <button
-                      type="button"
-                      className="btn-surface"
-                      onClick={() => showNotice(`Viewing curatorial dossier for ${item.title}`)}
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px' }}
-                    >
-                      Dossier
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => showNotice(`Logistics & Travel Grant cleared for ${item.artisan}`)}
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      Logistics
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-outline)', padding: '2rem' }}>
+            <Loader2 size={18} className="animate-spin" /> Loading events...
           </div>
-        </div>
+        ) : (
+          <AdminManagementView
+            title="Scheduled Events & Workshops"
+            subtitle="Artist Assignments, Capacity, and Publication Status"
+            data={events}
+            columns={columns}
+            actions={actions}
+            searchPlaceholder="Search events by title or type..."
+            filterKey="status"
+            filterOptions={['published', 'draft', 'pending_approval', 'ongoing', 'completed', 'cancelled']}
+            addLabel="Create Event"
+            onAdd={openCreate}
+          />
+        )
       )}
 
-      {/* Tab 3: Institutional Escrow Pipeline */}
-      {activeTab === 'escrow' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div
-            style={{
-              padding: '1rem 1.25rem',
-              borderRadius: '0.75rem',
-              backgroundColor: 'var(--color-surface-container-low)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-on-surface)' }}>
-              Institutional Escrow Ledger • ₹42,50,000 Secured • 0% Extractive Intermediary Cut
-            </span>
-            <button
-              type="button"
-              className="btn-surface"
-              onClick={() => showNotice('Escrow multi-sig state audited. All funds locked in sovereign smart contract.')}
-              style={{ padding: '6px 12px', fontSize: '12px' }}
-            >
-              Verify Smart Escrow
-            </button>
-          </div>
+      {activeTab === 'escrow' && <BookingLedger />}
 
-          <BookingLedger />
-        </div>
-      )}
-
-      {/* Modal Dialog for Create / Edit / Assign / Participants */}
-      {selectedEvent && modalMode && (
+      {/* Modal */}
+      {modalMode && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-          onClick={() => setSelectedEvent(null)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+          onClick={() => { setSelectedEvent(null); setModalMode(null); }}
         >
           <div
-            style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              borderRadius: '1.25rem',
-              padding: '2rem',
-              maxWidth: '540px',
-              width: '100%',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-            }}
+            style={{ backgroundColor: 'var(--color-surface-container-lowest)', borderRadius: '1.25rem', padding: '2rem', maxWidth: '560px', width: '100%', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 className="font-headline-sm" style={{ fontSize: '20px', margin: 0 }}>
-                {modalMode === 'create' && 'Create New Masterclass / Event'}
-                {modalMode === 'edit' && `Edit Event: ${selectedEvent.title}`}
-                {modalMode === 'assign' && `Assign Lead Artist: ${selectedEvent.title}`}
-                {modalMode === 'participants' && `Cohort Participants: ${selectedEvent.title}`}
+                {modalMode === 'create' ? 'Create New Event' : `Edit Event: ${selectedEvent?.title}`}
               </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedEvent(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-outline)' }}
-              >
+              <button type="button" onClick={() => { setSelectedEvent(null); setModalMode(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-outline)' }}>
                 <X size={20} />
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <FormField label="Event Title" value={formData.title} onChange={(v) => setFormData((f) => ({ ...f, title: v }))} />
+
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Event Title</label>
-                <input
-                  type="text"
-                  defaultValue={selectedEvent.title}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-surface-container-high)',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    fontSize: '13px',
-                    color: 'var(--color-on-surface)',
-                    marginTop: '4px',
-                  }}
-                />
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Type</label>
+                <select value={formData.type} onChange={(e) => setFormData((f) => ({ ...f, type: e.target.value }))} style={inputStyle}>
+                  <option value="workshop">workshop</option>
+                  <option value="performance">performance</option>
+                  <option value="exhibition">exhibition</option>
+                  <option value="masterclass">masterclass</option>
+                  <option value="talk">talk</option>
+                </select>
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Lead Master Artisan</label>
-                <input
-                  type="text"
-                  defaultValue={selectedEvent.artist}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-surface-container-high)',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    fontSize: '13px',
-                    color: 'var(--color-on-surface)',
-                    marginTop: '4px',
-                  }}
-                />
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Artists (select one or more)</label>
+                <select
+                  multiple
+                  value={formData.artistIds || []}
+                  onChange={(e) => setFormData((f) => ({ ...f, artistIds: Array.from(e.target.selectedOptions).map((o) => o.value) }))}
+                  style={{ ...inputStyle, minHeight: '90px' }}
+                >
+                  {artistOptions.map((a) => (
+                    <option key={a._id} value={a._id}>{a.displayName}</option>
+                  ))}
+                </select>
               </div>
 
+              <FormField label="Description" value={formData.description} onChange={(v) => setFormData((f) => ({ ...f, description: v }))} textarea />
+              <FormField label="Date & Time" value={formData.dateTime} onChange={(v) => setFormData((f) => ({ ...f, dateTime: v }))} type="datetime-local" />
+              <FormField label="Duration (minutes)" value={formData.durationMinutes} onChange={(v) => setFormData((f) => ({ ...f, durationMinutes: v }))} type="number" />
+              <FormField label="City" value={formData.city} onChange={(v) => setFormData((f) => ({ ...f, city: v }))} />
+              <FormField label="Capacity" value={formData.capacity} onChange={(v) => setFormData((f) => ({ ...f, capacity: v }))} type="number" />
+              <FormField label="Price" value={formData.price} onChange={(v) => setFormData((f) => ({ ...f, price: v }))} type="number" />
+
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Host / Institution</label>
-                <input
-                  type="text"
-                  defaultValue={selectedEvent.organizer}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-surface-container-high)',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    fontSize: '13px',
-                    color: 'var(--color-on-surface)',
-                    marginTop: '4px',
-                  }}
-                />
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Status</label>
+                <select value={formData.status} onChange={(e) => setFormData((f) => ({ ...f, status: e.target.value }))} style={inputStyle}>
+                  <option value="draft">draft</option>
+                  <option value="pending_approval">pending_approval</option>
+                  <option value="published">published</option>
+                  <option value="ongoing">ongoing</option>
+                  <option value="completed">completed</option>
+                  <option value="cancelled">cancelled</option>
+                </select>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '1rem', borderTop: '1px solid var(--color-surface-container)' }}>
-              <button
-                type="button"
-                className="btn-surface"
-                onClick={() => setSelectedEvent(null)}
-                style={{ padding: '8px 16px', fontSize: '13px' }}
-              >
+              <button type="button" className="btn-surface" onClick={() => { setSelectedEvent(null); setModalMode(null); }} style={{ padding: '8px 16px', fontSize: '13px' }}>
                 Cancel
               </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  showNotice(`Event saved successfully.`);
-                  setSelectedEvent(null);
-                }}
-                style={{ padding: '8px 18px', fontSize: '13px' }}
-              >
-                Save Event
+              <button type="button" className="btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', fontSize: '13px' }}>
+                {saving ? 'Saving...' : 'Save Event'}
               </button>
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: '8px 16px', borderRadius: '9999px', border: 'none', fontSize: '13px',
+        fontWeight: active ? 700 : 500,
+        backgroundColor: active ? 'var(--color-primary)' : 'transparent',
+        color: active ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
+        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s',
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+const inputStyle = {
+  width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-surface-container-high)',
+  backgroundColor: 'var(--color-surface-container-lowest)', fontSize: '13px', color: 'var(--color-on-surface)', marginTop: '4px',
+};
+
+function FormField({ label, value, onChange, textarea, type = 'text' }) {
+  return (
+    <div>
+      <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>{label}</label>
+      {textarea ? (
+        <textarea value={value ?? ''} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, minHeight: '70px', resize: 'vertical' }} />
+      ) : (
+        <input type={type} value={value ?? ''} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
       )}
     </div>
   );

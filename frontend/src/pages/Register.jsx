@@ -1,11 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { TVARITA_BRANDMARK } from '../data/publicMockData';
-import { ArrowLeft, ArrowRight, User, Sparkles, Building, CheckCircle2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  User,
+  Sparkles,
+  Building,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import '../styles/auth.css';
 
 export default function Register() {
   const navigate = useNavigate();
+  const { register, verifyOtp, sendOtp, getRoleDashboardRoute } = useAuth();
+
+  const [step, setStep] = useState('form'); // 'form' | 'otp'
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -15,29 +28,104 @@ export default function Register() {
     agreeTerms: true,
   });
 
-  const roleRoutes = {
-    patron: '/dashboard/patron',
-    artisan: '/dashboard/artisan',
-    institution: '/dashboard/institution',
-  };
+  const [otp, setOtp] = useState('');
+  const [otpDemoCode, setOtpDemoCode] = useState(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleChange = (field, val) => {
     setFormData((prev) => ({ ...prev, [field]: val }));
+    if (error) setError(null);
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    const userPayload = {
-      name: formData.fullName || 'Tvarita Member',
-      email: formData.email,
-      phone: formData.phone,
-      role: formData.accountType,
-      registeredAt: new Date().toISOString(),
-    };
-    localStorage.setItem('tvarita_user', JSON.stringify(userPayload));
+    setError(null);
+    setSuccessMessage(null);
 
-    const targetRoute = roleRoutes[formData.accountType] || '/';
-    navigate(targetRoute);
+    if (!formData.fullName.trim() || !formData.email.trim() || !formData.password) {
+      setError('Please fill out all required fields.');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await register(formData);
+      if (result.otp) {
+        setOtpDemoCode(result.otp);
+      }
+      setSuccessMessage('Account created! Please verify your email with the 6-digit OTP.');
+      setCooldown(60);
+      setStep('otp');
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please verify your details and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp.trim() || otp.trim().length < 6) {
+      setError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    setError(null);
+    setVerifying(true);
+
+    try {
+      await verifyOtp(formData.email, otp.trim(), 'registration');
+      setSuccessMessage('✓ Email verified successfully! Opening your sanctuary dashboard...');
+
+      setTimeout(() => {
+        const targetRoute = getRoleDashboardRoute(formData.accountType);
+        navigate(targetRoute);
+      }, 1200);
+    } catch (err) {
+      setError(err.message || 'Invalid or expired OTP. Please try again.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || resending) return;
+    setError(null);
+    setResending(true);
+
+    try {
+      const res = await sendOtp(formData.email, 'registration', formData.fullName);
+      const newCode = res.data?.data?.otp || res.data?.otp;
+      if (newCode) {
+        setOtpDemoCode(newCode);
+      }
+      setCooldown(60);
+      setSuccessMessage('A fresh verification OTP has been sent to your email.');
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setError(err.message || 'Failed to resend OTP. Please try again in a moment.');
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -71,6 +159,34 @@ export default function Register() {
               Select your membership tier to begin ethical engagement.
             </p>
           </div>
+
+          {/* Error Alert */}
+          {error && (
+            <div
+              className="mb-4 p-3 rounded-xl bg-error-container/80 border border-error/20 flex items-start gap-2.5 text-on-error-container text-xs animate-shake"
+              role="alert"
+            >
+              <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-semibold block">Registration Notice</span>
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Success Banner */}
+          {successMessage && (
+            <div
+              className="mb-4 p-3 rounded-xl bg-secondary-container/80 border border-secondary/20 flex items-start gap-2.5 text-on-secondary-container text-xs"
+              role="status"
+            >
+              <CheckCircle2 className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-semibold block">Success</span>
+                <span>{successMessage} Redirecting to your dashboard...</span>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleRegister}>
             {/* Account Type Selector */}
@@ -175,7 +291,7 @@ export default function Register() {
                 required
                 value={formData.password}
                 onChange={(e) => handleChange('password', e.target.value)}
-                placeholder="Create a secure password"
+                placeholder="Create a secure password (min 6 characters)"
                 className="auth-text-input"
               />
             </div>
@@ -199,10 +315,20 @@ export default function Register() {
             {/* Submit */}
             <button
               type="submit"
-              className="auth-submit-btn"
+              disabled={loading}
+              className="auth-submit-btn flex items-center justify-center gap-2"
             >
-              <span>Complete Registration</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Registering with MongoDB...</span>
+                </>
+              ) : (
+                <>
+                  <span>Complete Registration</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
@@ -224,7 +350,7 @@ export default function Register() {
               Direct Agency & Sovereign Royalties
             </h2>
             <p className="font-body-sm text-on-surface-variant mt-3 leading-relaxed">
-              When you join Tvarita, you are participating in a sovereign cooperative model where 85% of artwork acquisitions go straight to the artisan hands.
+              When you join Tvarita, you are participating in a cooperative model that connects artisans directly with patrons and institutions.
             </p>
 
             <div className="space-y-3 mt-6">

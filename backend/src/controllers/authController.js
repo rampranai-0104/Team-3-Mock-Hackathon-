@@ -137,13 +137,15 @@ const register = async (req, res) => {
 
     // Automatically send verification OTP to user's registered email
     let otpDispatched = false;
+    let generatedOtp = null;
     try {
-      await otpService.generateAndSendOTP({
+      const otpRes = await otpService.generateAndSendOTP({
         email: normalizedEmail,
         purpose: 'registration',
         name: user.name
       });
       otpDispatched = true;
+      generatedOtp = otpRes.otp;
     } catch (otpErr) {
       console.warn('Note: Could not send registration OTP:', otpErr.message);
     }
@@ -157,7 +159,8 @@ const register = async (req, res) => {
         emailVerified: user.emailVerified
       },
       token,
-      otpSent: otpDispatched
+      otpSent: otpDispatched,
+      otp: generatedOtp
     }, 201);
   } catch (error) {
     console.error('Error in register:', error);

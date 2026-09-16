@@ -1,7 +1,34 @@
-import React from 'react';
-import { IMPACT_STATS } from '../../data/publicMockData';
+import React, { useEffect, useState } from 'react';
+import publicService from '../../services/publicService';
 
+// Real, live counts from the public catalog endpoints — no fabricated
+// currency/percentage figures (the backend has no aggregate "amount
+// disbursed" or "provenance authenticated" statistic to report).
 export default function ImpactSection() {
+  const [artFormCount, setArtFormCount] = useState(null);
+  const [artistCount, setArtistCount] = useState(null);
+  const [eventCount, setEventCount] = useState(null);
+
+  useEffect(() => {
+    publicService.getArtForms()
+      .then((res) => setArtFormCount(res?.data?.length || 0))
+      .catch(() => setArtFormCount(0));
+    publicService.getArtists()
+      .then((res) => setArtistCount(res?.data?.length || 0))
+      .catch(() => setArtistCount(0));
+    publicService.getEvents()
+      .then((res) => setEventCount(res?.data?.length || 0))
+      .catch(() => setEventCount(0));
+  }, []);
+
+  if (artFormCount === null || artistCount === null || eventCount === null) return null;
+
+  const impactStats = [
+    { value: String(artFormCount), label: 'Living Art Traditions', color: 'var(--color-primary)' },
+    { value: String(artistCount), label: 'Verified Master Artisans', color: 'var(--color-on-surface)' },
+    { value: String(eventCount), label: 'Upcoming Workshops', color: 'var(--color-secondary)' },
+  ];
+
   return (
     <section
       style={{
@@ -21,7 +48,7 @@ export default function ImpactSection() {
             textAlign: 'center',
           }}
         >
-          {IMPACT_STATS.map((stat, idx) => (
+          {impactStats.map((stat, idx) => (
             <div
               key={idx}
               style={{
@@ -51,15 +78,6 @@ export default function ImpactSection() {
                 }}
               >
                 {stat.label}
-              </span>
-              <span
-                className="font-body-sm"
-                style={{
-                  color: 'var(--color-outline)',
-                  marginTop: '2px',
-                }}
-              >
-                {stat.sub}
               </span>
             </div>
           ))}

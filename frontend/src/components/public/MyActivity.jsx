@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { myArtworkOrders } from '../../data/mockData';
 
-export default function MyActivity({ 
-  followedArtists, 
-  onUnfollowArtist, 
-  bookings, 
-  orders = myArtworkOrders 
+export default function MyActivity({
+  followedArtists = [],
+  onUnfollowArtist,
+  bookings = [],
+  orders = []
 }) {
   const [activeActivityTab, setActiveActivityTab] = useState('followed'); // 'followed' | 'bookings' | 'orders'
 
@@ -21,7 +20,7 @@ export default function MyActivity({
             My Activity &amp; Stewardship
           </h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Manage followed master custodians, view confirmed immersion passes, and inspect physical NFC provenance orders.
+            Manage followed master custodians, view your workshop bookings, and track your marketplace orders.
           </p>
         </div>
 
@@ -94,7 +93,13 @@ export default function MyActivity({
       {/* TAB 2: MY BOOKINGS */}
       {activeActivityTab === 'bookings' && (
         <div className="space-y-6">
-          {bookings.map((booking) => (
+          {bookings.length === 0 ? (
+            <div className="text-center py-12 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+              <span className="material-symbols-outlined text-outline text-[40px] mb-2">event_busy</span>
+              <h3 className="font-headline-sm text-base font-bold text-on-surface">No Bookings Yet</h3>
+              <p className="text-xs text-on-surface-variant mt-1">Book a workshop from "3. Upcoming Events" to see your pass here.</p>
+            </div>
+          ) : bookings.map((booking) => (
             <div
               key={booking.id}
               className="bg-surface-container-low rounded-2xl p-6 lg:p-8 border border-outline-variant/30 shadow-sm"
@@ -104,11 +109,13 @@ export default function MyActivity({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
                     <span className="font-label-caps text-xs text-secondary uppercase font-bold tracking-wider">
-                      Immersion Pass Confirmed
+                      {booking.status === 'confirmed' ? 'Booking Confirmed' : booking.status}
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-surface-container-lowest text-on-surface text-xs font-bold shadow-2xs">
-                      Pass ID: #{booking.passId}
-                    </span>
+                    {booking.passId && (
+                      <span className="px-3 py-1 rounded-full bg-surface-container-lowest text-on-surface text-xs font-bold shadow-2xs">
+                        Booking Code: {booking.passId}
+                      </span>
+                    )}
                   </div>
 
                   <h3 className="font-headline-md text-2xl font-bold text-on-surface">
@@ -126,44 +133,16 @@ export default function MyActivity({
                     </div>
                   </div>
 
-                  {/* Physical Prep-Kit Status Ribbon */}
-                  <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-start sm:items-center gap-3">
-                    <span className="material-symbols-outlined text-primary text-[22px] flex-shrink-0">
-                      local_shipping
-                    </span>
-                    <div className="text-xs">
-                      <span className="font-bold text-on-surface">Artisan Material Prep-Kit: </span>
-                      <span className="text-primary font-semibold">{booking.prepKitStatus}</span>
-                      <p className="text-[11px] text-outline mt-0.5">{booking.kitDetails}</p>
+                  <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-6 text-xs">
+                    <div>
+                      <span className="font-bold text-on-surface block">Seats</span>
+                      <span className="text-on-surface-variant">{booking.seats}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-on-surface block">Amount Paid</span>
+                      <span className="text-on-surface-variant">{booking.amount}</span>
                     </div>
                   </div>
-                </div>
-
-                {/* QR Code Pass Plinth */}
-                <div className="flex flex-col items-center p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm self-center lg:self-auto min-w-[180px]">
-                  <svg className="w-28 h-28 text-on-surface" viewBox="0 0 100 100" fill="currentColor">
-                    <rect x="10" y="10" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="4"/>
-                    <rect x="17" y="17" width="11" height="11" fill="currentColor"/>
-                    <rect x="65" y="10" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="4"/>
-                    <rect x="72" y="17" width="11" height="11" fill="currentColor"/>
-                    <rect x="10" y="65" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="4"/>
-                    <rect x="17" y="72" width="11" height="11" fill="currentColor"/>
-                    <rect x="45" y="15" width="8" height="20" fill="currentColor"/>
-                    <rect x="40" y="45" width="20" height="10" fill="currentColor"/>
-                    <rect x="65" y="55" width="25" height="8" fill="currentColor"/>
-                    <rect x="50" y="70" width="15" height="20" fill="currentColor"/>
-                    <circle cx="50" cy="50" r="4" fill="#9f3c16"/>
-                  </svg>
-                  <span className="text-[10px] font-label-caps text-outline uppercase font-semibold mt-2">
-                    TOKEN: #{booking.passId}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => alert(`Digital Pass #${booking.passId} downloaded for offline verification.`)}
-                    className="mt-2 text-xs text-primary font-semibold hover:underline"
-                  >
-                    Download Pass
-                  </button>
                 </div>
               </div>
             </div>
@@ -171,10 +150,16 @@ export default function MyActivity({
         </div>
       )}
 
-      {/* TAB 3: MY ORDERS & 5-STAGE NFC PROVENANCE STEPPER */}
+      {/* TAB 3: MY ORDERS */}
       {activeActivityTab === 'orders' && (
         <div className="space-y-6">
-          {orders.map((order) => (
+          {orders.length === 0 ? (
+            <div className="text-center py-12 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+              <span className="material-symbols-outlined text-outline text-[40px] mb-2">local_mall</span>
+              <h3 className="font-headline-sm text-base font-bold text-on-surface">No Orders Yet</h3>
+              <p className="text-xs text-on-surface-variant mt-1">Acquire an artwork from "5. Marketplace" to see your order here.</p>
+            </div>
+          ) : orders.map((order) => (
             <div
               key={order.id}
               className="bg-surface-container-low rounded-2xl p-6 lg:p-8 border border-outline-variant/30 shadow-sm"
@@ -183,7 +168,7 @@ export default function MyActivity({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-6 border-b border-outline-variant/30">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-label-caps text-xs text-primary uppercase font-bold tracking-wider">
-                    Physical Artwork Provenance
+                    {order.status}
                   </span>
                   <span className="text-outline text-xs">•</span>
                   <span className="font-headline-sm text-sm font-bold text-on-surface">{order.orderNumber}</span>
@@ -192,82 +177,29 @@ export default function MyActivity({
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Artwork Passe-Partout Mat Plinth */}
+                {/* Artwork Plinth */}
                 <OrderArtworkPlinth order={order} />
 
-                {/* 5-Stage Vertical NFC Provenance Audit Tracker */}
+                {/* Order Line Items */}
                 <div className="lg:col-span-7 space-y-4">
                   <div>
                     <h4 className="font-headline-sm text-lg font-bold text-on-surface">
-                      Cryptographic Provenance Audit Trail
+                      Order Items
                     </h4>
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      Physical verification stages recorded on decentralized sovereign artisan ledger.
-                    </p>
                   </div>
 
-                  {/* Vertical Stepper */}
-                  <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-outline-variant/40">
-                    {order.stepper.map((stepNode) => {
-                      const isCompleted = stepNode.status === 'completed';
-                      const isInProgress = stepNode.status === 'in_progress';
-
-                      return (
-                        <div key={stepNode.step} className="relative flex items-start gap-3">
-                          {/* Node Icon */}
-                          <div
-                            className={`absolute -left-6 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                              isCompleted
-                                ? 'bg-secondary text-white'
-                                : isInProgress
-                                ? 'bg-primary text-white ring-4 ring-primary-fixed animate-pulse'
-                                : 'bg-surface-container-high text-outline'
-                            }`}
-                          >
-                            {isCompleted ? (
-                              <span className="material-symbols-outlined text-[14px]">check</span>
-                            ) : (
-                              <span className="text-[10px] font-bold">{stepNode.step}</span>
-                            )}
-                          </div>
-
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <h5 className={`text-xs font-bold ${isCompleted || isInProgress ? 'text-on-surface' : 'text-outline'}`}>
-                                {stepNode.title}
-                              </h5>
-                              <span className="text-[10px] text-outline">{stepNode.date}</span>
-                            </div>
-                            <p className="text-[11px] text-on-surface-variant mt-0.5">
-                              {stepNode.step === 1 && "Payment confirmed via Razorpay Sandbox & escrow locked."}
-                              {stepNode.step === 2 && "Traditional cotton substrate stretched on teak frame & coated with sacred organic wash."}
-                              {stepNode.step === 3 && `Authenticated with thumb impression & signature of Master ${order.artist}.`}
-                              {stepNode.step === 4 && `Embedded tamper-proof physical NFC microchip: ${order.nfcProvenanceTag}.`}
-                              {stepNode.step === 5 && "Insured transit via Cultural Courier with temperature & humidity control."}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Physical Token Badge */}
-                  <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">nfc</span>
-                      <div>
-                        <span className="font-bold text-on-surface block">NFC Hardware Tag ID:</span>
-                        <code className="text-primary text-[11px]">{order.nfcProvenanceTag}</code>
+                  <div className="space-y-2">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/20 text-xs">
+                        <span className="text-on-surface font-medium">{item.title} × {item.quantity}</span>
+                        <span className="text-on-surface-variant">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => alert(`Certificate of Authenticity for Order ${order.orderNumber}\nGI Tag: ${order.giTagNumber}\nMaster Artist: ${order.artist}\nEscrow Verification: 100% Complete`)}
-                      className="px-3.5 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors flex items-center gap-1"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">verified_user</span>
-                      <span>View Certificate</span>
-                    </button>
+                    ))}
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between text-xs">
+                    <span className="text-on-surface-variant">Subtotal: {order.subtotal} + Shipping: {order.shipping}</span>
+                    <span className="font-bold text-on-surface">Total: {order.amount}</span>
                   </div>
                 </div>
               </div>
@@ -344,6 +276,7 @@ function FollowedArtistCard({ artist, onUnfollowArtist }) {
 
 function OrderArtworkPlinth({ order }) {
   const [imageError, setImageError] = useState(false);
+  const firstItem = order.items?.[0];
 
   return (
     <div className="lg:col-span-5 bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/30 shadow-sm text-center">
@@ -363,13 +296,11 @@ function OrderArtworkPlinth({ order }) {
         )}
       </div>
       <h4 className="font-headline-sm text-base font-bold text-on-surface mt-3">
-        {order.title}
+        {firstItem?.title || 'Order'}
       </h4>
-      <p className="text-xs text-outline mt-0.5">{order.dimensions}</p>
 
       <div className="mt-3 pt-3 border-t border-outline-variant/20 flex items-center justify-between text-xs">
-        <span className="text-outline">Paid: <strong className="text-on-surface">{order.amount}</strong></span>
-        <span className="text-secondary font-semibold">100% Escrow Disbursed</span>
+        <span className="text-outline">Total Paid: <strong className="text-on-surface">{order.amount}</strong></span>
       </div>
     </div>
   );

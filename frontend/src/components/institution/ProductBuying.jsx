@@ -1,14 +1,67 @@
-import React, { useState } from 'react';
-import { institutionData } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
+import publicService from '../../services/publicService';
+import institutionService from '../../services/institutionService';
+
+function mapProductToSouvenir(raw) {
+  return {
+    id: raw._id,
+    title: raw.title || raw.name || 'Handcrafted Artifact',
+    tradition: raw.artFormId?.name || 'Traditional Craft',
+    unitPrice: Number(raw.price) || 0,
+    image: raw.images?.[0]?.url || raw.media?.[0]?.url || '',
+    description: raw.description || 'A handcrafted piece from a verified artisan.',
+  };
+}
 
 export default function ProductBuying() {
-  const [quantities, setQuantities] = useState({
-    souv_mithila_desk: 50,
-    souv_gond_coaster: 30,
-    souv_dokra_paperweight: 100
-  });
+  const [souvenirs, setSouvenirs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [quantities, setQuantities] = useState({});
+  const [shippingAddress, setShippingAddress] = useState(null);
 
   const [rfqDossierModal, setRfqDossierModal] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderError, setOrderError] = useState(null);
+  const [orderConfirmation, setOrderConfirmation] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await publicService.getProducts();
+        const list = Array.isArray(res?.data) ? res.data : [];
+        const mapped = list.map(mapProductToSouvenir);
+        if (mounted) {
+          setSouvenirs(mapped);
+          const initialQty = {};
+          mapped.forEach((item) => { initialQty[item.id] = 0; });
+          setQuantities(initialQty);
+        }
+      } catch (err) {
+        if (mounted) setError(err.message || 'Unable to load the procurement catalog right now.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Use the institution's real on-file address for shipping, if set.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await institutionService.getProfile();
+        if (mounted) setShippingAddress(res?.data?.address || null);
+      } catch (err) {
+        console.info('No institution address on file yet:', err.message);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const handleQtyChange = (id, val) => {
     setQuantities(prev => ({
@@ -16,8 +69,6 @@ export default function ProductBuying() {
       [id]: Math.max(0, parseInt(val, 10) || 0)
     }));
   };
-
-  const souvenirs = institutionData.bulkSouvenirs;
 
   // Calculate dynamic subtotal
   const rawSubtotal = souvenirs.reduce((acc, item) => {
@@ -30,7 +81,38 @@ export default function ProductBuying() {
   const discountRate = totalItemsCount >= 100 ? 0.08 : totalItemsCount >= 50 ? 0.05 : 0;
   const discountAmount = Math.round(rawSubtotal * discountRate);
   const finalTotal = rawSubtotal - discountAmount;
-  const directArtisanWages = Math.round(finalTotal * 0.884);
+
+  const handleCreateBulkOrder = async () => {
+    setIsSubmittingOrder(true);
+    setOrderError(null);
+    try {
+      const activeItems = souvenirs
+        .filter(item => (quantities[item.id] || 0) > 0)
+        .map(item => ({
+          productId: item.id,
+          title: item.title,
+          price: item.unitPrice,
+          quantity: quantities[item.id],
+          image: item.image
+        }));
+
+      if (activeItems.length === 0) {
+        setOrderError('Add at least one item before placing the order.');
+        return;
+      }
+
+      const res = await institutionService.createOrder({
+        items: activeItems,
+        shippingAddress: shippingAddress || {},
+      });
+      const orderNum = res?.data?.orderNumber || 'Pending';
+      setOrderConfirmation(orderNum);
+    } catch (err) {
+      setOrderError(err.message || 'Order placement failed. Please try again.');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -41,115 +123,106 @@ export default function ProductBuying() {
             Section 5 • Institutional Procurement
           </span>
           <h2 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface">
-            Certified Bulk Corporate Gifting
+            Bulk Corporate Gifting
           </h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Handcrafted desk artifacts and executive souvenirs direct from certified tribal craft cooperatives.
+            Handcrafted artifacts and executive souvenirs direct from verified artisans, for bulk institutional orders.
           </p>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-semibold">
-            80G CSR Deductible
-          </span>
+      {loading && (
+        <div className="text-center py-12 text-on-surface-variant">
+          <p className="font-headline-sm text-base">Loading procurement catalog…</p>
         </div>
-      </div>
+      )}
 
-      {/* Souvenirs Catalog Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {souvenirs.map((item) => {
-          const qty = quantities[item.id] || 0;
-          return (
-            <SouvenirCard
-              key={item.id}
-              item={item}
-              qty={qty}
-              onQtyChange={handleQtyChange}
-            />
-          );
-        })}
-      </div>
+      {!loading && error && (
+        <div className="text-center py-12 text-error">
+          <p className="font-headline-sm text-base">{error}</p>
+        </div>
+      )}
 
-      {/* DYNAMIC BULK QUOTATION GENERATOR BAR */}
-      <section className="rounded-2xl bg-surface-container-high p-6 lg:p-8 border border-outline-variant/30 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-outline-variant/30">
-          <div>
-            <span className="text-[10px] font-label-caps text-primary uppercase font-bold tracking-wider block">
-              Automated RFQ Calculator
-            </span>
-            <h3 className="font-headline-sm text-xl font-bold text-on-surface mt-0.5">
-              Institutional Quotation Estimate ({totalItemsCount} Total Units)
-            </h3>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              Includes custom cooperative provenance tags, gift docket sleeves, and direct guild honorariums.
-            </p>
+      {!loading && !error && souvenirs.length === 0 && (
+        <div className="text-center py-12 text-on-surface-variant">
+          <p className="font-headline-sm text-base">No published products available for bulk procurement yet.</p>
+        </div>
+      )}
+
+      {!loading && !error && souvenirs.length > 0 && (
+        <>
+          {/* Souvenirs Catalog Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {souvenirs.map((item) => {
+              const qty = quantities[item.id] || 0;
+              return (
+                <SouvenirCard
+                  key={item.id}
+                  item={item}
+                  qty={qty}
+                  onQtyChange={handleQtyChange}
+                />
+              );
+            })}
           </div>
 
-          {discountRate > 0 && (
-            <span className="px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold self-start lg:self-auto">
-              {(discountRate * 100)}% Volume Institutional Rebate Applied
-            </span>
-          )}
-        </div>
+          {/* BULK QUOTATION SUMMARY — real quantities × real prices, with a client-side volume discount */}
+          <section className="rounded-2xl bg-surface-container-high p-6 lg:p-8 border border-outline-variant/30 shadow-sm space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-outline-variant/30">
+              <div>
+                <span className="text-[10px] font-label-caps text-primary uppercase font-bold tracking-wider block">
+                  Bulk Quotation
+                </span>
+                <h3 className="font-headline-sm text-xl font-bold text-on-surface mt-0.5">
+                  Institutional Quotation Estimate ({totalItemsCount} Total Units)
+                </h3>
+              </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/20">
-            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Total Estimated Quote</span>
-            <span className="font-headline-sm text-2xl font-bold text-primary">
-              ₹{finalTotal.toLocaleString('en-IN')}
-            </span>
-            {discountAmount > 0 && (
-              <span className="text-[11px] text-secondary block mt-0.5">
-                Saved ₹{discountAmount.toLocaleString('en-IN')} with bulk slab
+              {discountRate > 0 && (
+                <span className="px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold self-start lg:self-auto">
+                  {(discountRate * 100)}% Volume Discount Applied
+                </span>
+              )}
+            </div>
+
+            <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/20 max-w-xs">
+              <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Total Estimated Quote</span>
+              <span className="font-headline-sm text-2xl font-bold text-primary">
+                ₹{finalTotal.toLocaleString('en-IN')}
               </span>
-            )}
-          </div>
+              {discountAmount > 0 && (
+                <span className="text-[11px] text-secondary block mt-0.5">
+                  Saved ₹{discountAmount.toLocaleString('en-IN')} with bulk slab
+                </span>
+              )}
+            </div>
 
-          <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/20">
-            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Direct Artisan Remuneration (88.4%)</span>
-            <span className="font-headline-sm text-2xl font-bold text-on-surface">
-              ₹{directArtisanWages.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[11px] text-secondary font-medium block mt-0.5">
-              Disbursed directly to tribal guilds
-            </span>
-          </div>
+            {/* Action Button */}
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <button
+                type="button"
+                disabled={totalItemsCount === 0}
+                onClick={() => { setOrderConfirmation(null); setOrderError(null); setRfqDossierModal(true); }}
+                className="px-6 py-3 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
+                <span>Review & Place Order</span>
+              </button>
+            </div>
+          </section>
+        </>
+      )}
 
-          <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/20 flex flex-col justify-between">
-            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">Tax &amp; Audit Exemption</span>
-            <span className="text-xs font-bold text-on-surface mt-1">100% Eligible under Section 80G Cultural CSR</span>
-            <span className="text-[10px] text-outline mt-1">Audited cooperative certificate enclosed</span>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <span className="text-xs text-outline">Direct-to-cooperative certification and GST invoicing included.</span>
-          
-          <button
-            type="button"
-            onClick={() => setRfqDossierModal(true)}
-            className="px-6 py-3 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[18px]">download_for_offline</span>
-            <span>Generate Institutional RFQ Dossier</span>
-          </button>
-        </div>
-      </section>
-
-      {/* RFQ Dossier Modal */}
+      {/* Order Review Modal */}
       {rfqDossierModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="relative w-full max-w-lg bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 bg-surface-container-low border-b border-outline-variant/30 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[24px]">fact_check</span>
-                <div>
-                  <h3 className="font-headline-sm text-lg font-bold text-on-surface">Institutional RFQ Dossier Prepared</h3>
-                  <span className="text-xs text-outline">The Heritage School &amp; Global Academy</span>
-                </div>
+                <h3 className="font-headline-sm text-lg font-bold text-on-surface">Review Bulk Order</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setRfqDossierModal(false)}
                 className="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container"
               >
@@ -158,50 +231,45 @@ export default function ProductBuying() {
             </div>
 
             <div className="p-6 space-y-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Mithila Desk Dockets ({quantities.souv_mithila_desk} units):</span>
-                  <strong>₹{(1150 * (quantities.souv_mithila_desk || 0)).toLocaleString('en-IN')}</strong>
+              {orderConfirmation ? (
+                <div className="p-3.5 rounded-xl bg-secondary-container/60 text-on-secondary-container space-y-1">
+                  <p className="font-bold text-sm">Order #{orderConfirmation} Placed</p>
+                  <p>Your institutional purchase order has been recorded.</p>
                 </div>
-                <div className="flex justify-between">
-                  <span>Gond Wooden Coaster Guild Boxes ({quantities.souv_gond_coaster} units):</span>
-                  <strong>₹{(2850 * (quantities.souv_gond_coaster || 0)).toLocaleString('en-IN')}</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Dokra Bell Metal Paperweights ({quantities.souv_dokra_paperweight} units):</span>
-                  <strong>₹{(780 * (quantities.souv_dokra_paperweight || 0)).toLocaleString('en-IN')}</strong>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-secondary pt-1 border-t border-outline-variant/20">
-                    <span>Volume Institutional Rebate:</span>
-                    <strong>-₹{discountAmount.toLocaleString('en-IN')}</strong>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-surface-container-low space-y-1.5">
+                  {souvenirs.filter((item) => (quantities[item.id] || 0) > 0).map((item) => (
+                    <div key={item.id} className="flex justify-between">
+                      <span>{item.title} ({quantities[item.id]} units):</span>
+                      <strong>₹{(item.unitPrice * quantities[item.id]).toLocaleString('en-IN')}</strong>
+                    </div>
+                  ))}
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-secondary pt-1 border-t border-outline-variant/20">
+                      <span>Volume Discount:</span>
+                      <strong>-₹{discountAmount.toLocaleString('en-IN')}</strong>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-bold text-primary pt-2 border-t border-outline-variant/30">
+                    <span>Grand Total:</span>
+                    <span>₹{finalTotal.toLocaleString('en-IN')}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-sm font-bold text-primary pt-2 border-t border-outline-variant/30">
-                  <span>Grand Total Requisition:</span>
-                  <span>₹{finalTotal.toLocaleString('en-IN')}</span>
                 </div>
-              </div>
+              )}
 
-              <div className="p-3 rounded-xl bg-secondary-container/40 text-on-secondary-container space-y-1">
-                <span className="font-bold block">Artisan Impact Statement:</span>
-                <p className="text-[11px]">
-                  ₹{directArtisanWages.toLocaleString('en-IN')} will be transferred directly to the artisan cooperative accounts across Madhubani, Patangarh, and Jharkhand upon purchase order release.
-                </p>
-              </div>
+              {orderError && (
+                <p className="text-error text-[11px]">{orderError}</p>
+              )}
             </div>
 
-            <div className="p-4 px-6 border-t border-outline-variant/30 bg-surface-container-low flex justify-between items-center">
-              <span className="text-xs text-outline font-medium">Valid for 30 Business Days</span>
+            <div className="p-4 px-6 border-t border-outline-variant/30 bg-surface-container-low flex justify-end items-center">
               <button
                 type="button"
-                onClick={() => {
-                  alert(`Official Institutional RFQ Dossier downloaded for The Heritage School & Global Academy.\nProvisional Quote: ₹${finalTotal.toLocaleString('en-IN')}`);
-                  setRfqDossierModal(false);
-                }}
-                className="px-5 py-2 rounded-full bg-primary text-on-primary text-xs font-semibold shadow-xs"
+                disabled={isSubmittingOrder || !!orderConfirmation}
+                onClick={handleCreateBulkOrder}
+                className="px-5 py-2 rounded-full bg-primary text-on-primary text-xs font-semibold shadow-xs disabled:opacity-60"
               >
-                Download PDF Dossier
+                {isSubmittingOrder ? 'Placing Order…' : orderConfirmation ? 'Order Placed' : 'Confirm Purchase Order'}
               </button>
             </div>
           </div>
@@ -227,23 +295,13 @@ function SouvenirCard({ item, qty, onQtyChange }) {
               onError={() => setImageError(true)}
               className="w-full h-full object-cover rounded-xl shadow-xs"
             />
-            <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
-              MOQ {item.moq} UNITS
-            </span>
           </div>
         )}
 
         <div className="p-5 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
-              {item.tradition}
-            </span>
-            {(!item.image || imageError) && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-surface-container text-on-surface font-semibold">
-                MOQ {item.moq} UNITS
-              </span>
-            )}
-          </div>
+          <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
+            {item.tradition}
+          </span>
 
           <h3 className="font-headline-sm text-base font-bold text-on-surface">
             {item.title}

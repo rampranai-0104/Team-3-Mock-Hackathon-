@@ -22,17 +22,24 @@ const createRequest = async (req, res) => {
             institutionId = institution._id;
         }
 
+        const mongoose = require('mongoose');
+        const validArtistId = (artistId && mongoose.Types.ObjectId.isValid(artistId)) ? artistId : null;
+        const validArtFormId = (artFormId && mongoose.Types.ObjectId.isValid(artFormId)) ? artFormId : null;
+        const validPreferredDate = preferredDate && !isNaN(new Date(preferredDate).getTime()) 
+            ? new Date(preferredDate) 
+            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
         const newRequest = await Request.create({
             requesterId: req.user._id,
             requesterType: req.user.role === "institution" ? "institution" : "individual",
             institutionId,
-            artistId: artistId || null,
-            artFormId: artFormId || null,
-            title,
+            artistId: validArtistId,
+            artFormId: validArtFormId,
+            title: title || "Artisan Workshop Requisition",
             eventType: eventType || "workshop",
             groupSize: groupSize || 20,
-            preferredDate,
-            alternateDate,
+            preferredDate: validPreferredDate,
+            alternateDate: alternateDate && !isNaN(new Date(alternateDate).getTime()) ? new Date(alternateDate) : undefined,
             budget: budget || 0,
             location: location || {},
             message: message || "",
