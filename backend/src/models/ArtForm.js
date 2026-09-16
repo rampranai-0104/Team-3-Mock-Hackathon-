@@ -1,49 +1,57 @@
 const mongoose = require('mongoose');
 
-const ArtFormSchema = new mongoose.Schema({
+const artFormSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: [true, "Art form name is required"],
-        unique: true,
-        trim: true
+      type: String,
+      required: [true, 'Art form name is required'],
+      unique: true,
+      trim: true
     },
     slug: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true
     },
     description: {
-        type: String,
-        required: [true, "Description is required"],
-        trim: true
+      type: String,
+      trim: true,
+      default: ''
     },
     regions: [{
-        type: String,
-        trim: true
+      type: String,
+      trim: true
     }],
     history: {
-        type: String,
-        default: ""
+      type: String,
+      default: ''
     },
     techniques: [{
-        type: String
+      type: String
     }],
     materials: [{
-        type: String
+      type: String
     }],
     media: [{
-        url: { type: String, required: true },
-        publicId: { type: String, default: "" },
-        type: { type: String, default: "image" },
-        caption: { type: String, default: "" }
+      url: { type: String, required: true },
+      publicId: { type: String, default: '' },
+      type: { type: String, default: 'image' },
+      caption: { type: String, default: '' }
     }],
     status: {
-        type: String,
-        enum: ["active", "inactive"],
-        default: "active"
+      type: String,
+      enum: ['active', 'inactive', 'draft'],
+      default: 'active'
     }
-}, { timestamps: true });
+  },
+  {
+    timestamps: true
+  }
+);
 
-module.exports = mongoose.model("ArtForm", ArtFormSchema);
+const ArtForm = mongoose.model('ArtForm', artFormSchema);
+
+module.exports = ArtForm;

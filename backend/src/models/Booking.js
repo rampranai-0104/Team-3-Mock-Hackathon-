@@ -1,44 +1,76 @@
 const mongoose = require('mongoose');
+const { BOOKING_STATUS } = require('../constants');
 
-const BookingSchema = new mongoose.Schema({
+const bookingSchema = new mongoose.Schema(
+  {
     bookingCode: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      index: true
     },
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
     },
     institutionId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Institution"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Institution'
     },
     eventId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Event",
-        required: [true, "Event is required"]
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event',
+      required: true,
+      index: true
+    },
+    artistId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Artist',
+      index: true
     },
     quantity: {
-        type: Number,
-        default: 1,
-        min: 1
+      type: Number,
+      required: true,
+      min: 1,
+      default: 1
     },
     amount: {
-        type: Number,
-        default: 0
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0
     },
     status: {
-        type: String,
-        enum: ["pending_payment", "confirmed", "cancelled", "completed", "no_show"],
-        default: "confirmed"
+      type: String,
+      enum: Object.values(BOOKING_STATUS || {
+        PENDING_PAYMENT: 'pending_payment',
+        PENDING: 'pending',
+        CONFIRMED: 'confirmed',
+        CANCELLED: 'cancelled',
+        COMPLETED: 'completed',
+        NO_SHOW: 'no_show',
+        REFUNDED: 'refunded'
+      }),
+      default: 'confirmed',
+      index: true
+    },
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment'
     },
     notes: {
-        type: String,
-        default: ""
+      type: String,
+      default: ''
     }
-}, { timestamps: true });
+  },
+  {
+    timestamps: true
+  }
+);
 
-module.exports = mongoose.model("Booking", BookingSchema);
+const Booking = mongoose.model('Booking', bookingSchema);
 
+module.exports = Booking;

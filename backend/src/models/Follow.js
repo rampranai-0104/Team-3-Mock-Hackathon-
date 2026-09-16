@@ -1,18 +1,28 @@
 const mongoose = require('mongoose');
 
-const FollowSchema = new mongoose.Schema({
+const followSchema = new mongoose.Schema(
+  {
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: [true, "User is required"]
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User is required'],
+      index: true
     },
     artistId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Artist",
-        required: [true, "Artist is required"]
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Artist',
+      required: [true, 'Artist is required'],
+      index: true
     }
-}, { timestamps: true });
+  },
+  {
+    timestamps: true
+  }
+);
 
-FollowSchema.index({ userId: 1, artistId: 1 }, { unique: true });
+// Compound unique index to prevent duplicate follows
+followSchema.index({ userId: 1, artistId: 1 }, { unique: true });
 
-module.exports = mongoose.model("Follow", FollowSchema);
+const Follow = mongoose.model('Follow', followSchema);
+
+module.exports = Follow;
