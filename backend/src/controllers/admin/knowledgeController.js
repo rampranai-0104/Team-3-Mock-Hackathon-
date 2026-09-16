@@ -306,10 +306,103 @@ const uploadKnowledgeMedia = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/admin/knowledge/bulk-import
+ * Batch import knowledge/archive entries from CSV
+ */
+const bulkImportKnowledge = async (req, res) => {
+  try {
+    const { parseCSV } = require('../../utils/csvParser');
+    let csvContent = '';
+
+    if (req.file && req.file.buffer) {
+      csvContent = req.file.buffer.toString('utf-8');
+    } else if (req.body && req.body.csvData) {
+      csvContent = req.body.csvData;
+    } else if (typeof req.body === 'string' && req.body.trim().startsWith('title')) {
+      csvContent = req.body;
+    }
+
+    if (!csvContent || !csvContent.trim()) {
+      return sendError(res, 'No CSV file or CSV content provided for import.', null, 400);
+    }
+
+    const rows = parseCSV(csvContent);
+    if (rows.length === 0) {
+      return sendError(res, 'CSV content is empty or contains only headers.', null, 400);
+    }
+
+    const summary = {
+      totalRows: rows.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      errors: []
+    };
+
+    for (const row of rows) {
+      const rowNum = row._rowNumber || 'Unknown';
+      const title = row.title ? row.title.trim() : '';
+      const content = row.content ? row.content.trim() : '';
+      const type = row.type && Object.values(KNOWLEDGE_TYPES).includes(row.type.toLowerCase().trim())
+        ? row.type.toLowerCase().trim()
+        : KNOWLEDGE_TYPES.ARTICLE;
+      const status = row.status && Object.values(KNOWLEDGE_STATUS).includes(row.status.toLowerCase().trim())
+        ? row.status.toLowerCase().trim()
+        : KNOWLEDGE_STATUS.DRAFT;
+
+      if (!title) {
+        summary.failed++;
+        summary.errors.push({ row: rowNum, field: 'title', message: 'Title is required' });
+        continue;
+      }
+
+      if (!content) {
+        summary.failed++;
+        summary.errors.push({ row: rowNum, field: 'content', message: 'Content is required' });
+        continue;
+      }
+
+      let artFormId = null;
+      if (row.artFormId && mongoose.Types.ObjectId.isValid(row.artFormId.trim())) {
+        artFormId = row.artFormId.trim();
+      }
+
+      let artistIds = [];
+      if (row.artistIds && row.artistIds.trim()) {
+        const idTokens = row.artistIds.split(/[;,]/).map(t => t.trim()).filter(id => mongoose.Types.ObjectId.isValid(id));
+        artistIds = idTokens;
+      }
+
+      await KnowledgeItem.create({
+        title,
+        type,
+        artFormId,
+        artistIds,
+        content,
+        summary: row.summary ? row.summary.trim() : '',
+        sources: row.sources ? row.sources.split(/[;,]/).map(s => s.trim()).filter(Boolean) : [],
+        language: row.language ? row.language.trim() : 'en',
+        status,
+        createdBy: req.user._id
+      });
+
+      summary.created++;
+    }
+
+    return sendSuccess(res, 'Bulk knowledge import completed', summary);
+  } catch (error) {
+    console.error('Error in bulkImportKnowledge:', error);
+    return sendError(res, 'Failed to perform bulk knowledge import', error.message, 500);
+  }
+};
+
 module.exports = {
   getKnowledgeItems,
   createKnowledgeItem,
   updateKnowledgeItem,
   deleteKnowledgeItem,
-  uploadKnowledgeMedia
+  uploadKnowledgeMedia,
+  bulkImportKnowledge
 };

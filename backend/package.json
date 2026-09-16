@@ -9,7 +9,8 @@
     "test": "node tests/verify_artist_modules.js",
     "test:profile": "node tests/verify_artist_profile.js",
     "test:admin": "node tests/verify_admin_part1.js",
-    "test:admin2": "node tests/verify_admin_part2.js"
+    "test:admin2": "node tests/verify_admin_part2.js",
+    "test:onboard": "node tests/verify_admin_artist_onboarding.js"
   },
   "keywords": [
     "mern",

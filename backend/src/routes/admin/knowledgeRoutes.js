@@ -5,7 +5,8 @@ const {
   createKnowledgeItem,
   updateKnowledgeItem,
   deleteKnowledgeItem,
-  uploadKnowledgeMedia
+  uploadKnowledgeMedia,
+  bulkImportKnowledge
 } = require('../../controllers/admin/knowledgeController');
 const { protect } = require('../../middleware/authMiddleware');
 const { authorizeRoles } = require('../../middleware/roleMiddleware');
@@ -19,6 +20,11 @@ router.use(authorizeRoles(ROLES.ADMIN));
  * @route   GET /api/admin/knowledge
  */
 router.get('/', getKnowledgeItems);
+
+/**
+ * @route   POST /api/admin/knowledge/bulk-import
+ */
+router.post('/bulk-import', handleUpload('file'), bulkImportKnowledge);
 
 /**
  * @route   POST /api/admin/knowledge

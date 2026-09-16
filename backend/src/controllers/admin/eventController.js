@@ -311,9 +311,111 @@ const deleteEvent = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/admin/events/bulk-import
+ * Batch import events referencing existing artists from CSV
+ */
+const bulkImportEvents = async (req, res) => {
+  try {
+    const { parseCSV } = require('../../utils/csvParser');
+    let csvContent = '';
+
+    if (req.file && req.file.buffer) {
+      csvContent = req.file.buffer.toString('utf-8');
+    } else if (req.body && req.body.csvData) {
+      csvContent = req.body.csvData;
+    } else if (typeof req.body === 'string' && req.body.trim().startsWith('artistId')) {
+      csvContent = req.body;
+    }
+
+    if (!csvContent || !csvContent.trim()) {
+      return sendError(res, 'No CSV file or CSV content provided for import.', null, 400);
+    }
+
+    const rows = parseCSV(csvContent);
+    if (rows.length === 0) {
+      return sendError(res, 'CSV content is empty or contains only headers.', null, 400);
+    }
+
+    const summary = {
+      totalRows: rows.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      errors: []
+    };
+
+    for (const row of rows) {
+      const rowNum = row._rowNumber || 'Unknown';
+      const artistId = row.artistId ? row.artistId.trim() : '';
+      const title = row.title ? row.title.trim() : '';
+      const dateTime = row.dateTime ? new Date(row.dateTime.trim()) : null;
+      const capacity = row.capacity ? Number(row.capacity) : 20;
+      const price = row.price !== undefined && row.price !== '' ? Number(row.price) : 0;
+
+      if (!artistId || !mongoose.Types.ObjectId.isValid(artistId)) {
+        summary.failed++;
+        summary.errors.push({ row: rowNum, field: 'artistId', message: 'Valid artistId ObjectId is required' });
+        continue;
+      }
+
+      const artistExists = await Artist.findById(artistId);
+      if (!artistExists) {
+        summary.failed++;
+        summary.errors.push({ row: rowNum, field: 'artistId', message: `Artist ${artistId} not found` });
+        continue;
+      }
+
+      if (!title) {
+        summary.failed++;
+        summary.errors.push({ row: rowNum, field: 'title', message: 'Event title is required' });
+        continue;
+      }
+
+      if (!dateTime || isNaN(dateTime.getTime())) {
+        summary.failed++;
+        summary.errors.push({ row: rowNum, field: 'dateTime', message: 'Valid dateTime string/ISO format is required' });
+        continue;
+      }
+
+      const status = row.status && Object.values(EVENT_STATUS).includes(row.status.toLowerCase().trim())
+        ? row.status.toLowerCase().trim()
+        : EVENT_STATUS.PUBLISHED;
+
+      const type = row.type && Object.values(EVENT_TYPES).includes(row.type.toLowerCase().trim())
+        ? row.type.toLowerCase().trim()
+        : EVENT_TYPES.WORKSHOP;
+
+      await Event.create({
+        title,
+        type,
+        artistIds: [artistId],
+        createdBy: req.user._id,
+        artFormIds: artistExists.artFormIds || [],
+        description: row.description ? row.description.trim() : '',
+        dateTime,
+        durationMinutes: row.durationMinutes ? Number(row.durationMinutes) : 60,
+        location: { address: row.location || '', city: row.city || '' },
+        capacity: isNaN(capacity) || capacity < 1 ? 20 : capacity,
+        price: isNaN(price) || price < 0 ? 0 : price,
+        status
+      });
+
+      summary.created++;
+    }
+
+    return sendSuccess(res, 'Bulk event import completed', summary);
+  } catch (error) {
+    console.error('Error in bulkImportEvents:', error);
+    return sendError(res, 'Failed to perform bulk event import', error.message, 500);
+  }
+};
+
 module.exports = {
   getEvents,
   createEvent,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  bulkImportEvents
 };

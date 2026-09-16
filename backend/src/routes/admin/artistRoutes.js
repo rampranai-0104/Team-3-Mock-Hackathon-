@@ -6,10 +6,12 @@ const {
   createArtist,
   updateArtist,
   approveArtist,
-  rejectArtist
+  rejectArtist,
+  bulkImportArtists
 } = require('../../controllers/admin/artistController');
 const { protect } = require('../../middleware/authMiddleware');
 const { authorizeRoles } = require('../../middleware/roleMiddleware');
+const { handleUpload } = require('../../middleware/uploadMiddleware');
 const { ROLES } = require('../../constants');
 
 router.use(protect);
@@ -19,6 +21,11 @@ router.use(authorizeRoles(ROLES.ADMIN));
  * @route   GET /api/admin/artists
  */
 router.get('/', getArtists);
+
+/**
+ * @route   POST /api/admin/artists/bulk-import
+ */
+router.post('/bulk-import', handleUpload('file'), bulkImportArtists);
 
 /**
  * @route   GET /api/admin/artists/:id
