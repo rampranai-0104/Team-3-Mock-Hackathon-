@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Artist = require('../models/Artist');
+const Institution = require('../models/Institution');
 const otpService = require('../services/otpService');
 const generateToken = require('../utils/generateToken');
 const { hashPassword, comparePassword } = require('../utils/passwordHasher');
@@ -102,6 +104,34 @@ const register = async (req, res) => {
       status: 'active',
       isActive: true
     });
+
+    // Auto-provision profile documents based on role
+    if (user.role === 'artist') {
+      try {
+        await Artist.create({
+          userId: user._id,
+          displayName: user.name,
+          bio: 'Preserving and practicing traditional tribal and folk heritage.',
+          experience: 1,
+          availability: true,
+          verificationStatus: 'approved'
+        });
+      } catch (profileErr) {
+        console.warn('Note: Could not auto-create Artist profile:', profileErr.message);
+      }
+    } else if (user.role === 'institution') {
+      try {
+        await Institution.create({
+          userId: user._id,
+          organizationName: user.name,
+          type: 'school',
+          contactPerson: { name: user.name, email: user.email, phone: user.phone },
+          verificationStatus: 'verified'
+        });
+      } catch (instErr) {
+        console.warn('Note: Could not auto-create Institution profile:', instErr.message);
+      }
+    }
 
     const token = generateToken(user._id, user.role);
 

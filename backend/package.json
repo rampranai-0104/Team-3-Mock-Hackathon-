@@ -13,7 +13,8 @@
     "test:onboard": "node tests/verify_admin_artist_onboarding.js",
     "test:compat": "node tests/verify_compatibility_fixes.js",
     "test:otp": "node tests/verify_otp_and_validators.js",
-    "test:all": "node tests/verify_compatibility_fixes.js && node tests/verify_otp_and_validators.js"
+    "test:all": "node tests/verify_compatibility_fixes.js && node tests/verify_otp_and_validators.js",
+    "seed:accounts": "node src/scripts/seedAccounts.js"
   },
   "keywords": [
     "tvarita",
