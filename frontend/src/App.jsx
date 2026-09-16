@@ -7,6 +7,8 @@ import ExploreArtists from './components/public/ExploreArtists';
 import UpcomingEvents from './components/public/UpcomingEvents';
 import MyActivity from './components/public/MyActivity';
 import Marketplace from './components/public/Marketplace';
+import InstExploreArtForms from './components/institution/InstExploreArtForms';
+import BookWorkshopsWizard from './components/institution/BookWorkshopsWizard';
 import { 
   publicUser, 
   artForms, 
@@ -32,6 +34,10 @@ export default function App() {
   const [bookingsList, setBookingsList] = useState(
     upcomingWorkshops.filter(w => w.confirmed)
   );
+
+  // Institution Inquiries / Requests state
+  const [requestsList, setRequestsList] = useState(institutionData.requests);
+  const [selectedWizardForm, setSelectedWizardForm] = useState('Warli');
 
   // Cart state
   const [cartItems, setCartItems] = useState([
@@ -59,6 +65,10 @@ export default function App() {
 
   const handleBookWorkshop = (booked) => {
     setBookingsList(prev => [booked, ...prev]);
+  };
+
+  const handleInquirySubmitted = (newRequest) => {
+    setRequestsList(prev => [newRequest, ...prev]);
   };
 
   const handleAddToCart = (product) => {
@@ -284,37 +294,57 @@ export default function App() {
                 <Marketplace onAddToCart={handleAddToCart} />
               )
             ) : (
-              /* SCHOOL / CORPORATE DASHBOARD (Step 5 & Step 6) */
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
-                  <h3 className="font-headline-sm text-xl font-bold text-on-surface">
-                    {institutionTab === 0 ? "1. Explore Art Forms (Educational & Corporate Guides)" :
-                     institutionTab === 1 ? "2. Book Workshops (4-Step Bespoke Wizard)" :
-                     institutionTab === 2 ? "3. Requests (Institutional Inquiry Tracker)" :
-                     institutionTab === 3 ? "4. Upcoming Events (Active Campus Sessions)" :
-                     "5. Product Buying (Bulk Gifting & Desk Souvenirs)"}
+              /* SCHOOL / CORPORATE DASHBOARD */
+              institutionTab === 0 ? (
+                /* SECTION 1: EXPLORE ART FORMS */
+                <InstExploreArtForms 
+                  onSelectForWorkshop={(formName) => {
+                    setSelectedWizardForm(formName);
+                    setInstitutionTab(1);
+                  }}
+                />
+              ) : institutionTab === 1 ? (
+                /* SECTION 2: BOOK WORKSHOPS WIZARD */
+                <BookWorkshopsWizard 
+                  initialForm={selectedWizardForm}
+                  onInquirySubmitted={handleInquirySubmitted}
+                />
+              ) : (
+                /* SECTIONS 3, 4, 5 (Scheduled for Step 6) */
+                <div className="py-8 text-center space-y-4">
+                  <div className="inline-flex p-4 rounded-full bg-primary-fixed text-primary mb-2">
+                    <span className="material-symbols-outlined text-[32px]">
+                      {institutionTab === 2 ? 'assignment' : institutionTab === 3 ? 'calendar_month' : 'inventory_2'}
+                    </span>
+                  </div>
+                  <h3 className="font-headline-sm text-2xl font-bold text-on-surface">
+                    {institutionTab === 2 ? '3. Requests (Institutional Inquiries & Proposals Tracker)' :
+                     institutionTab === 3 ? '4. Upcoming Events (Active Campus Sessions & Masterclasses)' :
+                     '5. Product Buying (Bulk Gifting & Desk Souvenirs)'}
                   </h3>
-                  <span className="text-xs px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container font-semibold">
-                    Scheduled for Steps 5 & 6
-                  </span>
+                  <p className="text-body-sm text-on-surface-variant max-w-md mx-auto">
+                    {institutionTab === 2
+                      ? `Tracking ${requestsList.length} active institutional requests with status progression and CSR spend.`
+                      : institutionTab === 3
+                      ? 'Scheduled campus cultural week sessions, live video links, and downloadable curriculum kits.'
+                      : 'Authentic bulk corporate gifts catalog with dynamic tiered quotation calculator and instant RFQ requisition.'}
+                  </p>
+                  <div className="flex justify-center gap-3 pt-2">
+                    <button 
+                      onClick={() => setInstitutionTab(0)}
+                      className="px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface"
+                    >
+                      ← Back to 1. Explore Art Forms
+                    </button>
+                    <button 
+                      onClick={() => setInstitutionTab(1)}
+                      className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-semibold shadow-xs"
+                    >
+                      Launch 2. Booking Wizard →
+                    </button>
+                  </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {institutionData.experiences.map(exp => (
-                    <div key={exp.id} className="p-5 rounded-xl bg-surface-container-low border border-outline-variant/20 flex flex-col justify-between">
-                      <div>
-                        <span className="text-[10px] font-label-caps text-primary uppercase font-bold">{exp.tag}</span>
-                        <h4 className="font-headline-sm text-lg font-bold text-on-surface mt-1">{exp.title}</h4>
-                        <p className="text-body-sm text-on-surface-variant mt-2 line-clamp-3">{exp.description}</p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-outline-variant/20 flex items-center justify-between text-xs">
-                        <span className="text-outline">{exp.grade}</span>
-                        <span className="text-primary font-semibold">{exp.tradition} Tradition</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )
             )}
           </div>
         </div>
