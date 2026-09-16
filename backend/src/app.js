@@ -17,6 +17,14 @@ const artistEarningsRoutes = require('./routes/artist/earningsRoutes');
 const artistFollowerRoutes = require('./routes/artist/followerRoutes');
 const artistProductRoutes = require('./routes/artist/productRoutes');
 
+// Import admin routes (Admin Part 1)
+const adminDashboardRoutes = require('./routes/admin/dashboardRoutes');
+const adminAnalyticsRoutes = require('./routes/admin/analyticsRoutes');
+const adminUserRoutes = require('./routes/admin/userRoutes');
+const adminArtistRoutes = require('./routes/admin/artistRoutes');
+const adminArtFormRoutes = require('./routes/admin/artFormRoutes');
+const adminEventRoutes = require('./routes/admin/eventRoutes');
+
 const app = express();
 
 // Security and utility middleware
@@ -44,6 +52,14 @@ app.use('/api/artists/me/earnings', artistEarningsRoutes);
 app.use('/api/artists/me/followers', artistFollowerRoutes);
 app.use('/api/artists/me/products', artistProductRoutes);
 app.use('/api/artists', artistProfileRoutes); // Handles /api/artists/me and /api/artists/me/media
+
+// Admin Portal Route Mountings (Admin Part 1)
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/admin/artists', adminArtistRoutes);
+app.use('/api/admin/art-forms', adminArtFormRoutes);
+app.use('/api/admin/events', adminEventRoutes);
 
 // Catch 404 routes
 app.use((req, res) => {

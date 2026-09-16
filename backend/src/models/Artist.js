@@ -81,6 +81,11 @@ const artistSchema = new mongoose.Schema(
       default: ARTIST_VERIFICATION_STATUS.PENDING,
       index: true
     },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     availability: {
       isAvailable: {
         type: Boolean,

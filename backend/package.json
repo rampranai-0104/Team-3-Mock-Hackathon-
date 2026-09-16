@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node tests/verify_artist_modules.js",
-    "test:profile": "node tests/verify_artist_profile.js"
+    "test:profile": "node tests/verify_artist_profile.js",
+    "test:admin": "node tests/verify_admin_part1.js"
   },
   "keywords": [
     "mern",
