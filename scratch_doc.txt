@@ -1,0 +1,930 @@
+
+TVARITA ARTS COLLECTIVE
+Digital Folk & Tribal Arts Ecosystem
+MERN Stack Project Documentation
+
+React + Vite (JSX)  |  Node.js + Express  |  MongoDB + MongooseJWT + Role-Based Access  |  Cloudinary + Multer  |  Socket.IOPWA  |  Razorpay Sandbox
+
+Prepared as a hackathon implementation blueprint
+
+1. Project Overview
+The project is a unified digital platform for Tvarita Arts Collective that connects the public, traditional artists, schools/corporates, and the Tvarita administration. The platform is intended to support discovery of Indian folk and tribal art forms, artist visibility, learning and community engagement, bookings, product sales, knowledge preservation, and organizational analytics.
+The supplied problem statement describes Tvarita's current operations as fragmented across spreadsheets, WhatsApp, Instagram, email, and manual documentation. The proposed platform therefore acts as a single digital ecosystem rather than only an e-commerce site. It also needs to be lightweight, visual, multilingual, mobile-friendly, and usable on low-end Android devices with intermittent connectivity.
+Source basis: Tvarita problem statement and the four dashboard plans supplied in this conversation. The exact 4-portal structure below is the team's implementation design, not a literal requirement that the source document calls 'four portals.'
+2. Four-Portal Product Structure
+Portal
+Primary Users
+Main Capabilities
+Public / Civilian Portal
+General public, art enthusiasts, students
+Explore art forms, explore artists, upcoming events, workshops/personal learning, followed artists, bookings, orders, marketplace/products.
+School / Corporate Portal
+Schools, colleges, corporates, event organizers
+Explore art forms, discover offerings, book workshops/experiences, submit requests, view upcoming events, purchase products.
+Artist Portal
+Traditional artists / master practitioners
+Profile/art information, individual and institution requests, events, earnings, followers, products, add/manage products.
+Tvarita Admin Portal
+Tvarita program/curation team
+Events management, product management, analytics, user management, artist management, art-form management, content/knowledge administration.
+
+3. Technology Stack
+Layer
+Technology
+Purpose
+Frontend
+React + Vite + JSX
+Single-page web application; no TypeScript. Role-based routing and reusable components.
+Backend
+Node.js + Express
+REST API, business logic, validation, authorization, integrations.
+Database
+MongoDB + Mongoose
+Users, artists, art forms, events, requests, bookings, orders, products, payments, knowledge, notifications.
+Authentication
+JWT
+Access-token authentication and role-based authorization.
+File Upload
+Multer
+Receive images/videos/files before transferring them to cloud storage.
+Media Storage
+Cloudinary or similar
+Artist photos, artwork images, event media, knowledge/archive media and videos.
+Realtime
+Socket.IO
+Optional real-time chat, request updates, booking notifications and admin alerts.
+PWA
+Service Worker + Web App Manifest
+Installable, responsive experience with caching/offline-friendly public content.
+Payments
+Razorpay Sandbox
+Test payments for bookings and product orders; server-side order creation and verification.
+
+4. High-Level Architecture
+React + Vite (JSX)        |        | HTTPS / REST + Socket.IO        vNode.js + Express API        |        +--> JWT Authentication / RBAC        +--> Business Services        +--> Multer --> Cloudinary        +--> Razorpay Sandbox        +--> Socket.IO        |        vMongoDB + Mongoose
+Recommended backend layering: Routes -> Controllers -> Services -> Models/Repositories -> External Integrations. Keep authentication, validation, error handling, logging, upload handling and payment verification in reusable middleware/services.
+5. Roles and Access Control
+Role
+Suggested Role Key
+Access
+Public / Civilian
+public
+Public discovery plus authenticated personal activity: follows, bookings, orders, profile.
+School / Corporate
+institution
+Institution profile, requests, bookings, events and product purchases.
+Artist
+artist
+Artist profile, requests, events, earnings, followers and products.
+Admin
+admin
+Full operational management, analytics, moderation and platform configuration.
+
+Use middleware such as authenticateJWT and authorizeRoles(...roles). Never rely only on frontend route protection; every protected API must enforce authorization on the server.
+6. Authentication, Registration & Account Management
+Registration should use a role-aware flow. A user selects Public/Civilian or School/Corporate during normal registration. Artist accounts can use an artist registration/onboarding flow and may require admin verification before public visibility. Admin accounts should be provisioned by an authorized admin rather than exposed as open public registration.
+Method
+Endpoint
+Auth
+Purpose / Main Data
+POST
+/api/auth/register
+Public
+Register public or institution user. name, email, password, phone, role, organization fields.
+POST
+/api/auth/login
+Public
+Login and issue JWT access token.
+POST
+/api/auth/refresh
+Refresh token
+Issue a new access token if refresh-token strategy is implemented.
+POST
+/api/auth/logout
+User
+Invalidate refresh token/session if server-side session tracking is used.
+GET
+/api/auth/me
+User
+Return current authenticated user and role.
+PATCH
+/api/auth/me
+User
+Update basic account information.
+POST
+/api/auth/change-password
+User
+Change password after validating current password.
+POST
+/api/auth/forgot-password
+Public
+Request password reset.
+POST
+/api/auth/reset-password
+Reset token
+Set a new password.
+POST
+/api/auth/verify-email
+Public
+Verify email using verification token/OTP.
+POST
+/api/auth/resend-verification
+Public
+Resend verification message.
+POST
+/api/auth/artist-register
+Public
+Artist onboarding request with profile and art-form information.
+GET
+/api/auth/roles
+Public
+Return allowed self-registration roles for the UI.
+
+7. Public / Civilian Portal APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/art-forms
+Public
+Browse/filter art forms.
+GET
+/api/art-forms/:id
+Public
+Art-form detail, story, region, media and related artists.
+GET
+/api/art-forms/:id/artists
+Public
+Artists associated with an art form.
+GET
+/api/art-forms/:id/events
+Public
+Upcoming events for an art form.
+GET
+/api/artists
+Public
+Search/filter artists by art form, region, language, availability.
+GET
+/api/artists/:id
+Public
+Public artist profile.
+GET
+/api/artists/:id/products
+Public
+Artist products.
+GET
+/api/artists/:id/events
+Public
+Artist events/experiences.
+GET
+/api/events
+Public
+Browse upcoming workshops/events.
+GET
+/api/events/:id
+Public
+Event details, artist, schedule, capacity and pricing.
+GET
+/api/products
+Public
+Marketplace catalog with filters/search.
+GET
+/api/products/:id
+Public
+Product details, media, artist and stock.
+GET
+/api/knowledge
+Public
+Browse knowledge/archive content.
+GET
+/api/knowledge/:id
+Public
+Read/watch an archive item.
+GET
+/api/search
+Public
+Global search across art forms, artists, events and products.
+POST
+/api/users/me/follows/artists/:artistId
+Public User
+Follow an artist.
+DELETE
+/api/users/me/follows/artists/:artistId
+Public User
+Unfollow an artist.
+GET
+/api/users/me/following
+Public User
+List followed artists.
+GET
+/api/users/me/activity
+Public User
+Combined activity summary.
+GET
+/api/users/me/bookings
+Public User
+My event/experience bookings.
+GET
+/api/users/me/orders
+Public User
+My product orders.
+GET
+/api/users/me/notifications
+Public User
+My notifications.
+
+8. School / Corporate Portal APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/institutions/me
+Institution
+View institution profile.
+PATCH
+/api/institutions/me
+Institution
+Update organization details, contact and preferences.
+GET
+/api/institutions/experiences
+Institution
+Browse institution-ready workshops/performances/masterclasses.
+GET
+/api/institutions/experiences/:id
+Institution
+View a curated experience.
+POST
+/api/requests
+Institution/User
+Create an individual or group/institution request.
+GET
+/api/requests
+Institution/User
+List own requests.
+GET
+/api/requests/:id
+Owner/Admin
+Request detail and status.
+PATCH
+/api/requests/:id
+Owner/Admin
+Update request details where permitted.
+POST
+/api/requests/:id/cancel
+Owner
+Cancel request before commitment.
+GET
+/api/institutions/me/bookings
+Institution
+Institution bookings.
+GET
+/api/institutions/me/orders
+Institution
+Institution product orders.
+GET
+/api/events
+Public/Institution
+View upcoming events.
+POST
+/api/bookings
+Institution/User
+Book an event/experience when enabled.
+POST
+/api/payments/orders
+Institution/User
+Create Razorpay payment order for a payable booking/order.
+
+9. Artist Portal APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/artists/me
+Artist
+View own artist profile.
+PATCH
+/api/artists/me
+Artist
+Update artist bio, languages, location, art information and media references.
+POST
+/api/artists/me/media
+Artist
+Upload profile/gallery/video media via Multer + Cloudinary.
+DELETE
+/api/artists/me/media/:mediaId
+Artist
+Delete own media.
+GET
+/api/artists/me/requests
+Artist
+View individual and group/institution requests.
+GET
+/api/artists/me/requests/:id
+Artist
+Request details.
+PATCH
+/api/artists/me/requests/:id
+Artist
+Accept/reject/update a request according to workflow.
+GET
+/api/artists/me/events
+Artist
+View assigned/created events.
+POST
+/api/artists/me/events
+Artist
+Create an event proposal/draft if permitted.
+PATCH
+/api/artists/me/events/:id
+Artist
+Update event information.
+GET
+/api/artists/me/earnings
+Artist
+Earnings summary and transaction history.
+GET
+/api/artists/me/followers
+Artist
+Follower count/list.
+GET
+/api/artists/me/products
+Artist
+Manage own products.
+POST
+/api/artists/me/products
+Artist
+Add product.
+GET
+/api/artists/me/products/:id
+Artist
+View own product.
+PATCH
+/api/artists/me/products/:id
+Artist
+Edit product.
+DELETE
+/api/artists/me/products/:id
+Artist
+Archive/delete product.
+POST
+/api/artists/me/products/:id/media
+Artist
+Upload product images/video.
+GET
+/api/artists/me/notifications
+Artist
+Artist notifications.
+
+10. Admin Portal APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/admin/dashboard
+Admin
+High-level KPIs: users, artists, art forms, events, bookings, orders, engagement.
+GET
+/api/admin/analytics/overview
+Admin
+Platform-wide overview analytics.
+GET
+/api/admin/analytics/artists
+Admin
+Artist growth, active artists, earnings trends.
+GET
+/api/admin/analytics/art-forms
+Admin
+Art-form visibility and engagement.
+GET
+/api/admin/analytics/engagement
+Admin
+Followers, views, bookings, learning activity.
+GET
+/api/admin/analytics/revenue
+Admin
+Bookings, product sales and payment summaries.
+GET
+/api/admin/users
+Admin
+List/filter users.
+GET
+/api/admin/users/:id
+Admin
+User detail.
+PATCH
+/api/admin/users/:id
+Admin
+Update status/role/profile fields where permitted.
+DELETE
+/api/admin/users/:id
+Admin
+Deactivate/delete user according to retention policy.
+GET
+/api/admin/artists
+Admin
+List/filter artists.
+GET
+/api/admin/artists/:id
+Admin
+Artist management detail.
+POST
+/api/admin/artists
+Admin
+Create artist record if needed.
+PATCH
+/api/admin/artists/:id
+Admin
+Edit artist/verification status.
+POST
+/api/admin/artists/:id/approve
+Admin
+Approve artist onboarding.
+POST
+/api/admin/artists/:id/reject
+Admin
+Reject artist onboarding with reason.
+GET
+/api/admin/art-forms
+Admin
+Manage art forms.
+POST
+/api/admin/art-forms
+Admin
+Create art form.
+PATCH
+/api/admin/art-forms/:id
+Admin
+Update art form.
+DELETE
+/api/admin/art-forms/:id
+Admin
+Archive art form.
+GET
+/api/admin/events
+Admin
+Event management.
+POST
+/api/admin/events
+Admin
+Create/publish event.
+PATCH
+/api/admin/events/:id
+Admin
+Update event.
+DELETE
+/api/admin/events/:id
+Admin
+Cancel/archive event.
+GET
+/api/admin/products
+Admin
+Product management/moderation.
+PATCH
+/api/admin/products/:id
+Admin
+Approve/edit/archive product.
+DELETE
+/api/admin/products/:id
+Admin
+Remove product from marketplace.
+GET
+/api/admin/requests
+Admin
+View/manage all booking/request inquiries.
+PATCH
+/api/admin/requests/:id
+Admin
+Update request status/assignment.
+GET
+/api/admin/bookings
+Admin
+View/manage bookings.
+PATCH
+/api/admin/bookings/:id
+Admin
+Update booking status/refund workflow where permitted.
+GET
+/api/admin/orders
+Admin
+View/manage product orders.
+PATCH
+/api/admin/orders/:id
+Admin
+Update fulfillment/order status.
+GET
+/api/admin/knowledge
+Admin
+Manage archive content.
+POST
+/api/admin/knowledge
+Admin
+Create knowledge/archive item.
+PATCH
+/api/admin/knowledge/:id
+Admin
+Update/archive content.
+DELETE
+/api/admin/knowledge/:id
+Admin
+Archive/delete content.
+POST
+/api/admin/notifications/broadcast
+Admin
+Send platform/role-based announcement.
+
+11. Booking, Orders & Payments APIs
+Use one booking/order service with clear status transitions. Razorpay credentials must never be exposed to the React client.
+Method
+Endpoint
+Auth
+Purpose
+POST
+/api/bookings
+User/Institution
+Create booking for event/experience; validate capacity, schedule and price.
+GET
+/api/bookings/:id
+Owner/Artist/Admin
+Booking details.
+PATCH
+/api/bookings/:id
+Owner/Artist/Admin
+Update allowed booking fields/status.
+POST
+/api/bookings/:id/cancel
+Owner/Artist/Admin
+Cancel booking according to cancellation policy.
+POST
+/api/payments/orders
+User/Institution
+Create Razorpay Sandbox order for a booking/order.
+POST
+/api/payments/verify
+User/Institution
+Verify Razorpay signature server-side and mark payment.
+POST
+/api/payments/webhook
+Razorpay
+Receive payment/refund status webhooks; verify webhook signature.
+GET
+/api/payments/:id
+Owner/Admin
+Payment details/status.
+POST
+/api/orders
+User/Institution
+Create product order from cart/selected items.
+GET
+/api/orders/:id
+Owner/Admin
+Order details.
+PATCH
+/api/orders/:id/status
+Admin
+Update fulfillment status.
+POST
+/api/orders/:id/cancel
+Owner/Admin
+Cancel order where permitted.
+
+12. Product / Marketplace APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/products
+Public
+Search/filter by artist, art form, region, price, availability.
+GET
+/api/products/:id
+Public
+Product details.
+POST
+/api/products
+Artist/Admin
+Create product.
+PATCH
+/api/products/:id
+Owner/Admin
+Update product.
+DELETE
+/api/products/:id
+Owner/Admin
+Archive product.
+POST
+/api/products/:id/media
+Owner/Admin
+Upload product media.
+GET
+/api/cart
+User/Institution
+Get current cart.
+POST
+/api/cart/items
+User/Institution
+Add product to cart.
+PATCH
+/api/cart/items/:productId
+User/Institution
+Change quantity.
+DELETE
+/api/cart/items/:productId
+User/Institution
+Remove product from cart.
+DELETE
+/api/cart
+User/Institution
+Clear cart.
+
+13. Knowledge Archive & Learning APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/knowledge
+Public
+Search/browse histories, techniques, materials, stories and practitioner lineages.
+GET
+/api/knowledge/:id
+Public
+Knowledge item detail.
+GET
+/api/knowledge/art-form/:artFormId
+Public
+Knowledge associated with an art form.
+POST
+/api/admin/knowledge
+Admin
+Create archive content.
+PATCH
+/api/admin/knowledge/:id
+Admin
+Edit/archive content.
+POST
+/api/admin/knowledge/:id/media
+Admin
+Upload archival images/videos/documents.
+GET
+/api/learning
+Public/User
+Browse learning journeys/personal learning content.
+GET
+/api/learning/:id
+Public/User
+Learning journey detail.
+POST
+/api/learning/:id/enroll
+User
+Join a learning journey if enrollment is supported.
+GET
+/api/users/me/learning
+User
+My learning journeys/progress.
+
+14. Media Upload APIs
+Method
+Endpoint
+Auth
+Purpose
+POST
+/api/uploads/image
+User/Artist/Admin
+Generic image upload; Multer receives file, Cloudinary stores it.
+POST
+/api/uploads/video
+Artist/Admin
+Video upload with file-size/type validation.
+DELETE
+/api/uploads/:publicId
+Owner/Admin
+Delete cloud media when permitted.
+
+For production, prefer resource-specific upload endpoints (artist media, product media, knowledge media) so ownership and validation are explicit. Limit MIME types and file sizes, sanitize metadata, and store only Cloudinary identifiers/URLs in MongoDB rather than binary files.
+15. Notifications & Optional Realtime APIs
+Method
+Endpoint
+Auth
+Purpose
+GET
+/api/notifications
+User
+List notifications.
+PATCH
+/api/notifications/:id/read
+User
+Mark notification as read.
+PATCH
+/api/notifications/read-all
+User
+Mark all notifications read.
+POST
+/api/conversations
+User/Artist/Institution
+Create or open a conversation if chat is enabled.
+GET
+/api/conversations
+User
+List user's conversations.
+GET
+/api/conversations/:id/messages
+Participant
+Load conversation messages.
+POST
+/api/conversations/:id/messages
+Participant
+Send message through REST fallback; Socket.IO should handle realtime delivery.
+
+Suggested Socket.IO events: connection, authenticate, join_conversation, send_message, new_message, typing, booking_status_changed, request_updated, notification, disconnect.
+16. Recommended MongoDB Collections / Mongoose Models
+Model
+Key Fields
+User
+_id, name, email, passwordHash, phone, role, status, emailVerified, avatar, preferredLanguage, createdAt
+Artist
+userId, displayName, bio, artFormIds, location, languages, experience, media, verificationStatus, availability
+ArtForm
+name, slug, description, regions, history, techniques, materials, media, status
+Event
+title, type, artistIds, artFormIds, description, date/time, location/online, capacity, price, status
+Request
+requesterId, requesterType, artistId, event/experience data, groupSize, preferredDate, message, status
+Booking
+bookingCode, user/institutionId, eventId, artistId, quantity, amount, status, paymentId
+Product
+artistId, artFormId, title, description, price, stock, media, status, moderationStatus
+Cart
+ownerId, items[{productId, quantity, priceSnapshot}]
+Order
+orderNumber, buyerId, items, subtotal, fees, total, shipping, status, paymentId
+Payment
+provider, providerOrderId, providerPaymentId, amount, currency, status, signature, metadata
+Follow
+userId, artistId, createdAt
+KnowledgeItem
+artFormId, artistIds, title, type, content, media, sources, language, status
+LearningJourney
+title, artFormId, modules, instructor/artistIds, enrollment rules
+Notification
+userId, type, title, message, entityId, readAt
+Conversation / Message
+participantIds, conversationId, senderId, text/media, readAt, timestamps
+Analytics/EventLog
+actorId, eventType, entityType, entityId, metadata, timestamp
+
+17. Important Status Workflows
+Keep status values controlled with enums in Mongoose.
+Entity
+Suggested Statuses
+Artist verification
+pending -> approved / rejected -> suspended
+Request
+pending -> accepted / rejected / cancelled / completed
+Event
+draft -> pending_approval -> published -> ongoing -> completed / cancelled
+Booking
+pending_payment -> confirmed -> cancelled / completed / no_show
+Payment
+created -> authorized -> captured / failed / refunded
+Order
+created -> paid -> processing -> shipped -> delivered / cancelled / refunded
+Product moderation
+draft -> pending_review -> approved / rejected -> archived
+Knowledge item
+draft -> review -> published -> archived
+
+18. React + Vite Frontend Structure (JSX Only)
+frontend/  src/    assets/    components/      common/      forms/      cards/      charts/      modals/    layouts/      PublicLayout.jsx      InstitutionLayout.jsx      ArtistLayout.jsx      AdminLayout.jsx    pages/      public/      institution/      artist/      admin/      auth/    routes/      AppRoutes.jsx      ProtectedRoute.jsx      RoleRoute.jsx    context/      AuthContext.jsx      CartContext.jsx    services/      api.js      authService.js      artistService.js      eventService.js      productService.js      bookingService.js      adminService.js    hooks/    utils/    App.jsx    main.jsx
+Use JSX throughout the frontend. Do not introduce .ts or .tsx files. Axios/fetch can be used for REST calls. Keep API calls in service modules rather than directly scattering them across UI components.
+19. Node + Express Backend Structure
+backend/  src/    config/      db.js      cloudinary.js      razorpay.js    controllers/    middleware/      auth.middleware.js      role.middleware.js      upload.middleware.js      error.middleware.js      validate.middleware.js    models/    routes/    services/      auth.service.js      booking.service.js      payment.service.js      cloudinary.service.js      notification.service.js    validators/    sockets/      index.js      handlers.js    utils/    app.js    server.js  .env  package.json
+20. Security & Validation Requirements
+Hash passwords with bcrypt/bcryptjs; never store plaintext passwords.
+Sign JWTs with a strong secret and short access-token expiry. If refresh tokens are used, store them securely and rotate/revoke them.
+Enforce role authorization in Express middleware for every protected route.
+Validate request bodies with a schema library such as Joi/Zod/express-validator.
+Use helmet, CORS configuration, rate limiting and request-size limits.
+Sanitize user-generated text and protect against injection/XSS where applicable.
+Validate upload MIME type, extension, size and ownership before sending to Cloudinary.
+Razorpay payment verification must happen on the server; never trust a client-provided 'payment successful' flag.
+Verify Razorpay webhook signatures before changing payment/order status.
+Use MongoDB indexes for email, slug, art-form references, event dates and common search fields.
+Log security-sensitive events without logging passwords, JWTs or payment secrets.
+Use HTTPS in deployment and keep all secrets in environment variables.
+21. API Conventions
+Base URL: /api
+Success:{  "success": true,  "message": "Request successful",  "data": { ... }}Error:{  "success": false,  "message": "Validation failed",  "errors": [    { "field": "email", "message": "Invalid email" }  ]}
+Status
+Meaning
+200
+Successful read/update/action
+201
+Resource created
+204
+Successful deletion with no response body
+400
+Invalid request/validation
+401
+Missing or invalid authentication
+403
+Authenticated but not authorized
+404
+Resource not found
+409
+Conflict, duplicate or state conflict
+422
+Semantically invalid data
+429
+Rate limit exceeded
+500
+Unexpected server error
+
+22. PWA & Low-Connectivity Strategy
+Use a responsive mobile-first UI, especially for the Artist Portal.
+Add Web App Manifest for installability.
+Use a service worker to cache the application shell and selected public discovery data.
+Cache low-risk read-only content such as art-form descriptions and public artist profiles; avoid caching sensitive account/payment data in insecure storage.
+Show clear offline/poor-connectivity states and retry failed requests.
+Optimize images through Cloudinary transformations and lazy loading.
+Keep pages lightweight and avoid unnecessary large bundles.
+23. Razorpay Sandbox Integration Flow
+Client selects a paid event/experience or product checkout.
+React sends checkout details to POST /api/payments/orders or the relevant booking/order endpoint.
+Express validates the amount from MongoDB rather than trusting a client-supplied amount.
+Backend creates a Razorpay Sandbox order using the server-side Razorpay credentials.
+Backend returns the Razorpay order ID to React.
+React opens Razorpay Checkout using the returned order ID.
+After checkout, React sends the payment identifiers/signature to POST /api/payments/verify.
+Backend verifies the Razorpay signature and updates Payment + Booking/Order atomically as far as practical.
+Razorpay webhook events are received at POST /api/payments/webhook and verified before updating final state.
+Frontend receives the updated booking/order status and shows confirmation.
+24. Cloudinary + Multer Upload Flow
+React sends multipart/form-data to the appropriate upload endpoint.
+Multer validates and temporarily handles the uploaded file.
+Backend checks authenticated user/artist ownership and file constraints.
+Backend uploads the file to Cloudinary.
+Cloudinary returns secure URL/public ID and optional metadata.
+MongoDB stores only the media URL/public ID and associated resource metadata.
+On deletion, backend verifies ownership/admin permission and removes the Cloudinary asset if required.
+25. Socket.IO Realtime Scope
+Socket.IO is optional for the core MVP. The REST APIs remain the source of truth. Add realtime features where they improve the experience without making the hackathon build fragile.
+New request notification to an artist.
+Request accepted/rejected notification to requester.
+Booking status change notifications.
+Admin alerts for new artist onboarding or institutional requests.
+Optional user-artist/institution chat.
+Typing indicators and read receipts only if chat is included in the MVP.
+26. Recommended Hackathon Implementation Order
+Set up MongoDB, Express server, Mongoose models and global error handling.
+Implement registration/login/JWT/RBAC for the four roles.
+Build Art Forms + Artists discovery APIs and public pages.
+Build Artist profile and product management.
+Build Events + Requests + Booking workflow.
+Add Razorpay Sandbox booking/payment flow.
+Build Public My Activity: follows, bookings and orders.
+Build Institution request and booking flow.
+Build Admin management pages and core analytics.
+Add Cloudinary/Multer media upload.
+Add notifications and Socket.IO where needed.
+Add PWA/offline optimizations and final security/validation testing.
+27. Hackathon MVP Scope
+To keep the demo achievable, the minimum end-to-end flow should demonstrate:
+Public user registration/login -> explore art forms -> explore artist -> view event/product.
+Public user -> book an event/workshop -> Razorpay Sandbox payment -> view booking in My Activity.
+Public user -> follow artist -> see followed artists.
+Artist login -> manage profile -> view request -> manage event -> add/manage product -> view earnings.
+School/Corporate login -> browse offerings -> submit institutional request -> track request/booking.
+Admin login -> manage artists/art forms/events/products/users -> view analytics.
+Admin/artist -> upload media to Cloudinary.
+Notification triggered after a request/booking status change.
+28. Requirement-to-Feature Traceability
+Problem Statement Need
+Planned Implementation
+Searchable discovery engine
+Public Art Forms, Artists, Search, regional/art-form filters.
+Community engagement
+Follow Artists, My Activity, notifications and optional chat.
+Booking + marketplace
+Events, Requests, Bookings, Products, Cart, Orders, Razorpay Sandbox.
+Artist-facing dashboard
+Profile, Requests, Events, Earnings, Followers, Products.
+Knowledge archive
+KnowledgeItem, learning journeys, archive media and public knowledge pages.
+Impact dashboards
+Admin analytics for community growth, engagement, artist income and art-form visibility.
+Low digital literacy / low-end Android
+Mobile-first Artist Portal, PWA, optimized media, simple workflows and offline-friendly public content.
+
+29. Environment Variables
+PORT=5000MONGODB_URI=...JWT_ACCESS_SECRET=...JWT_REFRESH_SECRET=...CLIENT_URL=http://localhost:5173CLOUDINARY_CLOUD_NAME=...CLOUDINARY_API_KEY=...CLOUDINARY_API_SECRET=...RAZORPAY_KEY_ID=...RAZORPAY_KEY_SECRET=...RAZORPAY_WEBHOOK_SECRET=...SMTP_HOST=...SMTP_PORT=...SMTP_USER=...SMTP_PASS=...
+Never commit .env files or API/payment secrets to GitHub.
+30. Final Project Definition
+Tvarita Digital Folk & Tribal Arts Ecosystem is a role-based MERN platform with four user experiences: Public/Civilian, School/Corporate, Artist, and Tvarita Admin. The public side focuses on discovery and sustained engagement; the institutional side focuses on organized cultural experiences and requests; the artist side focuses on digital visibility, requests, events, earnings and products; and the admin side provides centralized operations and impact analytics.
+The backend should be treated as the central source of truth for authentication, authorization, artist and art-form data, event/request/booking state, marketplace orders, payment verification, media metadata, notifications and analytics. The React frontend should consume these capabilities through versionable REST APIs under /api, with Socket.IO used only for realtime interactions.
+
+— End of Project Documentation —
