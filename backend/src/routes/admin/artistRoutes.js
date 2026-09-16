@@ -11,7 +11,7 @@ const {
 } = require('../../controllers/admin/artistController');
 const { protect } = require('../../middleware/authMiddleware');
 const { authorizeRoles } = require('../../middleware/roleMiddleware');
-const { handleUpload } = require('../../middleware/uploadMiddleware');
+const { handleCSVUpload } = require('../../middleware/uploadMiddleware');
 const { ROLES } = require('../../constants');
 
 router.use(protect);
@@ -25,7 +25,7 @@ router.get('/', getArtists);
 /**
  * @route   POST /api/admin/artists/bulk-import
  */
-router.post('/bulk-import', handleUpload('file'), bulkImportArtists);
+router.post('/bulk-import', handleCSVUpload('file'), bulkImportArtists);
 
 /**
  * @route   GET /api/admin/artists/:id

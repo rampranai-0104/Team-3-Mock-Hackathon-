@@ -67,17 +67,33 @@ const createPost = async ({
 
     const normalizedTags = normalizeHashtags(hashtags, caption);
 
-    const post = await CommunityPost.create({
-        author: authorId,
-        authorType,
-        caption,
-        images: uploadedImages,
-        hashtags: normalizedTags,
-        event: event || null,
-        artForm: artForm || null,
-        visibility,
-        status: 'published'
-    });
+    let post;
+    try {
+        post = await CommunityPost.create({
+            author: authorId,
+            authorType,
+            caption,
+            images: uploadedImages,
+            hashtags: normalizedTags,
+            event: event || null,
+            artForm: artForm || null,
+            visibility,
+            status: 'published'
+        });
+    } catch (saveError) {
+        if (uploadedImages.length > 0) {
+            for (const img of uploadedImages) {
+                if (img.publicId) {
+                    try {
+                        await cloudinaryService.deleteFromCloudinary(img.publicId);
+                    } catch (cloudErr) {
+                        console.error(`Failed to roll back Cloudinary asset ${img.publicId}:`, cloudErr.message);
+                    }
+                }
+            }
+        }
+        throw saveError;
+    }
 
     return await CommunityPost.findById(post._id)
         .populate('author', 'name avatar role')
@@ -181,7 +197,7 @@ const getPostById = async (postId, currentUserId) => {
     };
 };
 
-const updatePost = async ({ postId, userId, caption, hashtags, event, artForm }) => {
+const updatePost = async ({ postId, userId, caption, hashtags, event, artForm, files = [] }) => {
     const post = await CommunityPost.findById(postId);
     if (!post) {
         const error = new Error('Community post not found');
@@ -193,6 +209,16 @@ const updatePost = async ({ postId, userId, caption, hashtags, event, artForm })
         const error = new Error('You are not authorized to modify this post');
         error.statusCode = 403;
         throw error;
+    }
+
+    let newImages = null;
+    if (files && files.length > 0) {
+        newImages = await cloudinaryService.uploadMultipleImages(files, 'tvarita/community');
+    }
+
+    const oldImages = post.images;
+    if (newImages) {
+        post.images = newImages;
     }
 
     if (event !== undefined) {
@@ -231,7 +257,34 @@ const updatePost = async ({ postId, userId, caption, hashtags, event, artForm })
         post.hashtags = normalizeHashtags(hashtags, post.caption);
     }
 
-    await post.save();
+    try {
+        await post.save();
+    } catch (saveError) {
+        if (newImages) {
+            for (const img of newImages) {
+                if (img.publicId) {
+                    try {
+                        await cloudinaryService.deleteFromCloudinary(img.publicId);
+                    } catch (cloudErr) {
+                        console.error(`Failed to roll back Cloudinary asset ${img.publicId}:`, cloudErr.message);
+                    }
+                }
+            }
+        }
+        throw saveError;
+    }
+
+    if (newImages && oldImages && oldImages.length > 0) {
+        for (const img of oldImages) {
+            if (img.publicId) {
+                try {
+                    await cloudinaryService.deleteFromCloudinary(img.publicId);
+                } catch (cloudErr) {
+                    console.error(`Failed to delete old Cloudinary asset ${img.publicId}:`, cloudErr.message);
+                }
+            }
+        }
+    }
 
     return await CommunityPost.findById(post._id)
         .populate('author', 'name avatar role')

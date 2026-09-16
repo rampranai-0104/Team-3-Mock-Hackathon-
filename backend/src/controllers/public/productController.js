@@ -3,7 +3,10 @@ const Product = require("../../models/Product");
 const getApprovedProducts = async (req, res) => {
     try {
         const { search, artForm, artist, category, minPrice, maxPrice, inStock } = req.query;
-        let filter = { status: "approved" };
+        let filter = {
+            $or: [{ moderationStatus: "approved" }, { status: "approved" }],
+            status: { $ne: "archived" }
+        };
 
         if (artForm) {
             filter.artFormId = artForm;
@@ -28,9 +31,14 @@ const getApprovedProducts = async (req, res) => {
         }
 
         if (search) {
-            filter.$or = [
-                { name: { $regex: search, $options: "i" } },
-                { description: { $regex: search, $options: "i" } }
+            filter.$and = [
+                {
+                    $or: [
+                        { name: { $regex: search, $options: "i" } },
+                        { title: { $regex: search, $options: "i" } },
+                        { description: { $regex: search, $options: "i" } }
+                    ]
+                }
             ];
         }
 
@@ -57,7 +65,8 @@ const getProductById = async (req, res) => {
     try {
         const product = await Product.findOne({
             _id: req.params.id,
-            status: "approved"
+            $or: [{ moderationStatus: "approved" }, { status: "approved" }],
+            status: { $ne: "archived" }
         })
             .populate("artFormId", "name slug description media")
             .populate("artistId", "displayName bio profileImage location");

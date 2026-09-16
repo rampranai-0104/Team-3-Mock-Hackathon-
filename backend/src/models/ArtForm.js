@@ -41,6 +41,10 @@ const artFormSchema = new mongoose.Schema(
       type: { type: String, default: 'image' },
       caption: { type: String, default: '' }
     }],
+    image: {
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' }
+    },
     status: {
       type: String,
       enum: ['active', 'inactive', 'draft'],

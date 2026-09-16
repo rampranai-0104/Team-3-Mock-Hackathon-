@@ -10,7 +10,7 @@ const {
 } = require('../../controllers/admin/knowledgeController');
 const { protect } = require('../../middleware/authMiddleware');
 const { authorizeRoles } = require('../../middleware/roleMiddleware');
-const { handleUpload } = require('../../middleware/uploadMiddleware');
+const { handleUpload, handleCSVUpload } = require('../../middleware/uploadMiddleware');
 const { ROLES } = require('../../constants');
 
 router.use(protect);
@@ -24,7 +24,7 @@ router.get('/', getKnowledgeItems);
 /**
  * @route   POST /api/admin/knowledge/bulk-import
  */
-router.post('/bulk-import', handleUpload('file'), bulkImportKnowledge);
+router.post('/bulk-import', handleCSVUpload('file'), bulkImportKnowledge);
 
 /**
  * @route   POST /api/admin/knowledge

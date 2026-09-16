@@ -38,20 +38,23 @@ const createBooking = async (req, res) => {
 
         const bookingCode = generateBookingCode();
         const totalAmount = event.price * requestedSeats;
+        const primaryArtistId = (event.artistIds && event.artistIds.length > 0) ? event.artistIds[0] : null;
 
         const booking = await Booking.create({
             bookingCode,
             userId: req.user._id,
             institutionId,
             eventId: event._id,
+            artistId: primaryArtistId,
             quantity: requestedSeats,
             amount: totalAmount,
             status: "confirmed",
             notes: notes || ""
         });
 
-        // Decrement available seats
-        event.availableSeats -= requestedSeats;
+        // Decrement available seats and increment bookedCount
+        event.availableSeats = Math.max(0, event.availableSeats - requestedSeats);
+        event.bookedCount = (event.bookedCount || 0) + requestedSeats;
         await event.save();
 
         res.status(201).json({
@@ -144,6 +147,9 @@ const cancelBooking = async (req, res) => {
         const event = await Event.findById(booking.eventId);
         if (event) {
             event.availableSeats += booking.quantity;
+            if (event.bookedCount) {
+                event.bookedCount = Math.max(0, event.bookedCount - booking.quantity);
+            }
             await event.save();
         }
 

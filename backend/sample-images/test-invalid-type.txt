@@ -1,0 +1,1 @@
+this is not an image, used to test file-type rejection

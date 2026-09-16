@@ -9,7 +9,7 @@ const {
 } = require('../../controllers/admin/productController');
 const { protect } = require('../../middleware/authMiddleware');
 const { authorizeRoles } = require('../../middleware/roleMiddleware');
-const { handleUpload } = require('../../middleware/uploadMiddleware');
+const { handleCSVUpload } = require('../../middleware/uploadMiddleware');
 const { ROLES } = require('../../constants');
 
 router.use(protect);
@@ -23,7 +23,7 @@ router.get('/', getProducts);
 /**
  * @route   POST /api/admin/products/bulk-import
  */
-router.post('/bulk-import', handleUpload('file'), bulkImportProducts);
+router.post('/bulk-import', handleCSVUpload('file'), bulkImportProducts);
 
 /**
  * @route   POST /api/admin/products

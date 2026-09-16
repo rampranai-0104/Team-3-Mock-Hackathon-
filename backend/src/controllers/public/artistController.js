@@ -23,7 +23,11 @@ const getApprovedArtists = async (req, res) => {
         }
 
         if (availability !== undefined) {
-            filter.availability = availability === "true";
+            const isAvail = availability === "true";
+            filter.$or = [
+                { "availability.isAvailable": isAvail },
+                { availability: isAvail }
+            ];
         }
 
         if (search) {
@@ -69,7 +73,8 @@ const getArtistById = async (req, res) => {
 
         const products = await Product.find({
             artistId: artist._id,
-            status: "approved"
+            $or: [{ moderationStatus: "approved" }, { status: "approved" }],
+            status: { $ne: "archived" }
         }).limit(6);
 
         res.status(200).json({

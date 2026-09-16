@@ -4,6 +4,9 @@ const Artist = require('../../models/Artist');
 const Event = require('../../models/Event');
 const Product = require('../../models/Product');
 const { sendSuccess, sendError } = require('../../utils/apiResponse');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../../services/cloudinaryService');
+
+const ARTFORM_IMAGE_FOLDER = 'tvarita/artforms';
 
 // Helper to generate a slug from string
 const slugify = (text) => {
@@ -99,17 +102,41 @@ const createArtForm = async (req, res) => {
       return sendError(res, 'Validation failed', validationErrors, 400);
     }
 
-    const artForm = await ArtForm.create({
-      name: name.trim(),
-      slug: generatedSlug,
-      description: description ? description.trim() : '',
-      regions: Array.isArray(regions) ? regions : [],
-      history: history ? history.trim() : '',
-      techniques: Array.isArray(techniques) ? techniques : [],
-      materials: Array.isArray(materials) ? materials : [],
-      media: Array.isArray(media) ? media : [],
-      status: status || 'active'
-    });
+    let image = { url: '', publicId: '' };
+    if (req.file) {
+      try {
+        const uploaded = await uploadToCloudinary(req.file.buffer, ARTFORM_IMAGE_FOLDER);
+        image = { url: uploaded.url, publicId: uploaded.publicId };
+      } catch (uploadErr) {
+        console.error('Error uploading art form image:', uploadErr);
+        return sendError(res, `Image upload failed: ${uploadErr.message}`, null, 500);
+      }
+    }
+
+    let artForm;
+    try {
+      artForm = await ArtForm.create({
+        name: name.trim(),
+        slug: generatedSlug,
+        description: description ? description.trim() : '',
+        regions: Array.isArray(regions) ? regions : [],
+        history: history ? history.trim() : '',
+        techniques: Array.isArray(techniques) ? techniques : [],
+        materials: Array.isArray(materials) ? materials : [],
+        media: Array.isArray(media) ? media : [],
+        image,
+        status: status || 'active'
+      });
+    } catch (saveError) {
+      if (image.publicId) {
+        try {
+          await deleteFromCloudinary(image.publicId);
+        } catch (cloudErr) {
+          console.error(`Failed to roll back Cloudinary asset ${image.publicId}:`, cloudErr.message);
+        }
+      }
+      throw saveError;
+    }
 
     return sendSuccess(res, 'Art form created successfully', artForm, 201);
   } catch (error) {
@@ -167,6 +194,19 @@ const updateArtForm = async (req, res) => {
       return sendError(res, 'Validation failed', validationErrors, 400);
     }
 
+    let newImage = null;
+    if (req.file) {
+      try {
+        const uploaded = await uploadToCloudinary(req.file.buffer, ARTFORM_IMAGE_FOLDER);
+        newImage = { url: uploaded.url, publicId: uploaded.publicId };
+      } catch (uploadErr) {
+        console.error('Error uploading art form image:', uploadErr);
+        return sendError(res, `Image upload failed: ${uploadErr.message}`, null, 500);
+      }
+    }
+
+    const oldImage = artForm.image;
+
     if (name) artForm.name = name.trim();
     if (description !== undefined) artForm.description = description.trim();
     if (regions) artForm.regions = regions;
@@ -175,8 +215,28 @@ const updateArtForm = async (req, res) => {
     if (materials) artForm.materials = materials;
     if (media) artForm.media = media;
     if (status) artForm.status = status;
+    if (newImage) artForm.image = newImage;
 
-    await artForm.save();
+    try {
+      await artForm.save();
+    } catch (saveError) {
+      if (newImage && newImage.publicId) {
+        try {
+          await deleteFromCloudinary(newImage.publicId);
+        } catch (cloudErr) {
+          console.error(`Failed to roll back Cloudinary asset ${newImage.publicId}:`, cloudErr.message);
+        }
+      }
+      throw saveError;
+    }
+
+    if (newImage && oldImage && oldImage.publicId) {
+      try {
+        await deleteFromCloudinary(oldImage.publicId);
+      } catch (cloudErr) {
+        console.error(`Failed to delete old Cloudinary asset ${oldImage.publicId}:`, cloudErr.message);
+      }
+    }
 
     return sendSuccess(res, 'Art form updated successfully', artForm);
   } catch (error) {
@@ -224,6 +284,13 @@ const deleteArtForm = async (req, res) => {
     }
 
     // If completely unreferenced, hard delete
+    if (artForm.image && artForm.image.publicId) {
+      try {
+        await deleteFromCloudinary(artForm.image.publicId);
+      } catch (cloudErr) {
+        console.error(`Failed to delete Cloudinary asset ${artForm.image.publicId}:`, cloudErr.message);
+      }
+    }
     await ArtForm.findByIdAndDelete(id);
     return sendSuccess(res, 'Art form deleted successfully', { id });
   } catch (error) {

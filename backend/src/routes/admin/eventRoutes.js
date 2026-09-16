@@ -9,7 +9,7 @@ const {
 } = require('../../controllers/admin/eventController');
 const { protect } = require('../../middleware/authMiddleware');
 const { authorizeRoles } = require('../../middleware/roleMiddleware');
-const { handleUpload } = require('../../middleware/uploadMiddleware');
+const { handleCSVUpload } = require('../../middleware/uploadMiddleware');
 const { ROLES } = require('../../constants');
 
 router.use(protect);
@@ -23,7 +23,7 @@ router.get('/', getEvents);
 /**
  * @route   POST /api/admin/events/bulk-import
  */
-router.post('/bulk-import', handleUpload('file'), bulkImportEvents);
+router.post('/bulk-import', handleCSVUpload('file'), bulkImportEvents);
 
 /**
  * @route   POST /api/admin/events

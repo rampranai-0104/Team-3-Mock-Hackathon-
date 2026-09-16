@@ -1,30 +1,21 @@
 const { uploadToCloudinary } = require('../services/cloudinaryService');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 const testUpload = async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide an image file with field name "image"'
-            });
+            return sendError(res, 'Please provide an image file with field name "image"', null, 400);
         }
 
         const result = await uploadToCloudinary(req.file.buffer, 'tvarita/test');
 
-        res.status(200).json({
-            success: true,
-            message: 'Image uploaded successfully',
-            data: {
-                url: result.url,
-                publicId: result.publicId
-            }
-        });
+        return sendSuccess(res, 'Image uploaded successfully', {
+            url: result.url,
+            publicId: result.publicId
+        }, 200);
     } catch (error) {
         console.error('Test upload error:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Image upload failed'
-        });
+        return sendError(res, error.message || 'Image upload failed', null, 500);
     }
 };
 

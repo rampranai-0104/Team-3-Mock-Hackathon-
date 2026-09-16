@@ -18,7 +18,7 @@ const followArtist = async (req, res) => {
             });
         }
 
-        if (artist.userId.toString() === userId.toString()) {
+        if (artist.userId && artist.userId.toString() === userId.toString()) {
             return res.status(400).json({
                 success: false,
                 message: "You cannot follow yourself"

@@ -85,7 +85,8 @@ const updatePost = async (req, res) => {
             caption,
             hashtags,
             event,
-            artForm
+            artForm,
+            files: req.files
         });
 
         res.status(200).json({

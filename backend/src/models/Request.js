@@ -20,7 +20,7 @@ const requestSchema = new mongoose.Schema(
     artistId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Artist',
-      required: true,
+      required: false,
       index: true
     },
     artFormId: {

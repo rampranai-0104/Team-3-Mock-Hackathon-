@@ -36,10 +36,12 @@ const createOrder = async (req, res) => {
 
             orderItems.push({
                 productId: product._id,
-                name: product.name,
+                artistId: product.artistId,
+                title: product.title || product.name,
+                name: product.name || product.title,
                 price: product.price,
                 quantity,
-                image: product.images && product.images.length ? product.images[0].url : ""
+                image: (product.images && product.images.length) ? product.images[0].url : ((product.media && product.media.length) ? product.media[0].url : "")
             });
 
             subtotal += product.price * quantity;

@@ -79,16 +79,25 @@ const globalPublicSearch = async (query = '', options = {}) => {
 
         // 4. Products (Approved only)
         Product.find({
-            status: PRODUCT_STATUS.APPROVED,
             $or: [
-                { name: regex },
-                { description: regex },
-                { category: regex }
+                { moderationStatus: 'approved' },
+                { status: 'approved' }
+            ],
+            status: { $ne: 'archived' },
+            $and: [
+                {
+                    $or: [
+                        { name: regex },
+                        { title: regex },
+                        { description: regex },
+                        { category: regex }
+                    ]
+                }
             ]
         })
             .populate('artFormId', 'name slug')
             .populate('artistId', 'displayName profileImage')
-            .select('name description price stock category images status')
+            .select('name title description price stock category images media status moderationStatus')
             .limit(limit)
             .lean(),
 

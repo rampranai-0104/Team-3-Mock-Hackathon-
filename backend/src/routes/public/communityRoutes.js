@@ -29,7 +29,7 @@ const route = express.Router();
 route.post('/posts', authMiddleware, authorizeRoles('public', 'institution', 'admin'), uploadPostImages, validateCreatePost, createPost);
 route.get('/posts', optionalAuth, getFeed);
 route.get('/posts/:postId', optionalAuth, getPostById);
-route.put('/posts/:postId', authMiddleware, authorizeRoles('public', 'institution', 'admin'), validateUpdatePost, updatePost);
+route.put('/posts/:postId', authMiddleware, authorizeRoles('public', 'institution', 'admin'), uploadPostImages, validateUpdatePost, updatePost);
 route.delete('/posts/:postId', authMiddleware, authorizeRoles('public', 'institution', 'admin'), deletePost);
 
 route.post('/posts/:postId/like', authMiddleware, authorizeRoles('public', 'institution', 'admin'), likePost);
