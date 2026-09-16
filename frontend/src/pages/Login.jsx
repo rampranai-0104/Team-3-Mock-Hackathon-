@@ -80,7 +80,7 @@ export default function Login() {
               className="inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary font-label-md text-xs mb-4 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Sanctuary</span>
+              <span>Back to Home</span>
             </Link>
 
             <div className="flex items-center gap-3">
@@ -220,7 +220,7 @@ export default function Login() {
 
           {/* Registration link */}
           <div className="mt-6 pt-5 border-t border-outline-variant/30 text-center font-body-sm text-on-surface-variant">
-            <span>New custodian or collector? </span>
+            <span>New to Tvarita? </span>
             <Link to="/register" className="text-primary font-semibold hover:underline">
               Create an Account
             </Link>
@@ -232,10 +232,10 @@ export default function Login() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container text-on-surface font-label-caps text-[10px] tracking-wider mb-6">
               <Lock className="w-3 h-3 text-primary" />
-              <span>Sovereign Tribal Archive</span>
+              <span>Traditional Arts Archive</span>
             </div>
             <h2 className="font-headline-md text-2xl font-bold text-on-surface leading-snug">
-              "Honoring the lineage of indigenous wisdom through fair cultural stewardship."
+              "Connecting people with traditional Indian folk and tribal arts."
             </h2>
             <p className="font-body-sm text-on-surface-variant mt-3 leading-relaxed">
               Every access credential is authenticated against our live MongoDB cluster using secure, token-based session verification.
