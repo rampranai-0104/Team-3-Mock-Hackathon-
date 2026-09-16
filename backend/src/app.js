@@ -25,6 +25,13 @@ const adminArtistRoutes = require('./routes/admin/artistRoutes');
 const adminArtFormRoutes = require('./routes/admin/artFormRoutes');
 const adminEventRoutes = require('./routes/admin/eventRoutes');
 
+// Import admin routes (Admin Part 2)
+const adminProductRoutes = require('./routes/admin/productRoutes');
+const adminRequestRoutes = require('./routes/admin/requestRoutes');
+const adminBookingRoutes = require('./routes/admin/bookingRoutes');
+const adminOrderRoutes = require('./routes/admin/orderRoutes');
+const adminKnowledgeRoutes = require('./routes/admin/knowledgeRoutes');
+
 const app = express();
 
 // Security and utility middleware
@@ -60,6 +67,13 @@ app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/artists', adminArtistRoutes);
 app.use('/api/admin/art-forms', adminArtFormRoutes);
 app.use('/api/admin/events', adminEventRoutes);
+
+// Admin Portal Route Mountings (Admin Part 2)
+app.use('/api/admin/products', adminProductRoutes);
+app.use('/api/admin/requests', adminRequestRoutes);
+app.use('/api/admin/bookings', adminBookingRoutes);
+app.use('/api/admin/orders', adminOrderRoutes);
+app.use('/api/admin/knowledge', adminKnowledgeRoutes);
 
 // Catch 404 routes
 app.use((req, res) => {

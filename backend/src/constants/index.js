@@ -61,15 +61,19 @@ const PRODUCT_MODERATION_STATUS = Object.freeze({
 
 const BOOKING_STATUS = Object.freeze({
   PENDING: 'pending',
+  PENDING_PAYMENT: 'pending_payment',
   CONFIRMED: 'confirmed',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
+  NO_SHOW: 'no_show',
   REFUNDED: 'refunded'
 });
 
 const ORDER_STATUS = Object.freeze({
+  CREATED: 'created',
   PENDING: 'pending',
   PAID: 'paid',
+  PROCESSING: 'processing',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
@@ -84,6 +88,22 @@ const PAYMENT_STATUS = Object.freeze({
   FAILED: 'failed'
 });
 
+const KNOWLEDGE_STATUS = Object.freeze({
+  DRAFT: 'draft',
+  REVIEW: 'review',
+  PUBLISHED: 'published',
+  ARCHIVED: 'archived'
+});
+
+const KNOWLEDGE_TYPES = Object.freeze({
+  HISTORY: 'history',
+  TECHNIQUE: 'technique',
+  MATERIAL: 'material',
+  STORY: 'story',
+  LINEAGE: 'lineage',
+  ARTICLE: 'article'
+});
+
 module.exports = {
   ROLES,
   ARTIST_VERIFICATION_STATUS,
@@ -95,5 +115,7 @@ module.exports = {
   PRODUCT_MODERATION_STATUS,
   BOOKING_STATUS,
   ORDER_STATUS,
-  PAYMENT_STATUS
+  PAYMENT_STATUS,
+  KNOWLEDGE_STATUS,
+  KNOWLEDGE_TYPES
 };
