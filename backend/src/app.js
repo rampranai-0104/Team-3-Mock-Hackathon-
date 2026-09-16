@@ -28,6 +28,9 @@ const orderRoutes = require('./routes/institution/orderRoutes');
 const publicCommunityRoutes = require('./routes/public/communityRoutes');
 const institutionCommunityRoutes = require('./routes/institution/communityRoutes');
 
+// Development / Testing Routes (Temporary)
+const testRoutes = require('./routes/testRoutes');
+
 // Middleware
 const errorHandler = require('./middleware/errorMiddleware');
 
@@ -105,6 +108,11 @@ app.use('/api/institution/community', institutionCommunityRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/orders', orderRoutes);
+
+// ==========================================
+// Test / Development Upload Route (Temporary)
+// ==========================================
+app.use('/api/test', testRoutes);
 
 // ==========================================
 // API Routes: PERSON-2 PLACEHOLDERS (To be added later)

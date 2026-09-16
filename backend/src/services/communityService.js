@@ -256,14 +256,25 @@ const deletePost = async ({ postId, userId }) => {
     if (post.images && post.images.length > 0) {
         for (const img of post.images) {
             if (img.publicId) {
-                await cloudinaryService.deleteImage(img.publicId);
+                try {
+                    await cloudinaryService.deleteFromCloudinary(img.publicId);
+                } catch (cloudErr) {
+                    console.error(`Failed to delete Cloudinary asset ${img.publicId}:`, cloudErr.message);
+                }
             }
         }
     }
 
-    await PostLike.deleteMany({ post: postId });
-    await Comment.deleteMany({ post: postId });
-    await CommunityPost.findByIdAndDelete(postId);
+    try {
+        await PostLike.deleteMany({ post: postId });
+        await Comment.deleteMany({ post: postId });
+        await CommunityPost.findByIdAndDelete(postId);
+    } catch (dbErr) {
+        console.error(`Database deletion error for post ${postId}:`, dbErr.message);
+        const error = new Error('Failed to delete post records from database');
+        error.statusCode = 500;
+        throw error;
+    }
 
     return { message: 'Community post deleted successfully' };
 };
