@@ -43,6 +43,7 @@ router.get('/:id', getProductById);
  * @access  Private (Artist only)
  */
 router.patch('/:id', updateProduct);
+router.put('/:id', updateProduct);
 
 /**
  * @route   DELETE /api/artists/me/products/:id

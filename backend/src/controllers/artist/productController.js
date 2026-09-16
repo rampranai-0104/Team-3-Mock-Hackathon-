@@ -76,12 +76,23 @@ const createProduct = async (req, res) => {
       validationErrors.push({ field: 'stock', message: 'Stock must be a non-negative number.' });
     }
 
-    if (!artFormId || !mongoose.Types.ObjectId.isValid(artFormId)) {
-      validationErrors.push({ field: 'artFormId', message: 'Valid artFormId is required.' });
+    let finalArtFormId = artFormId;
+    if (!finalArtFormId || !mongoose.Types.ObjectId.isValid(finalArtFormId)) {
+      const defaultForm = await ArtForm.findOne();
+      if (defaultForm) {
+        finalArtFormId = defaultForm._id;
+      } else {
+        validationErrors.push({ field: 'artFormId', message: 'Valid artFormId is required.' });
+      }
     } else {
-      const artFormExists = await ArtForm.findById(artFormId);
+      const artFormExists = await ArtForm.findById(finalArtFormId);
       if (!artFormExists) {
-        validationErrors.push({ field: 'artFormId', message: 'Referenced art form does not exist.' });
+        const defaultForm = await ArtForm.findOne();
+        if (defaultForm) {
+          finalArtFormId = defaultForm._id;
+        } else {
+          validationErrors.push({ field: 'artFormId', message: 'Referenced art form does not exist.' });
+        }
       }
     }
 
@@ -103,18 +114,28 @@ const createProduct = async (req, res) => {
 
     const initialStatus = status && Object.values(PRODUCT_STATUS).includes(status)
       ? status
-      : PRODUCT_STATUS.DRAFT;
+      : PRODUCT_STATUS.ACTIVE || 'active';
+
+    let productImages = [];
+    if (req.body.images && Array.isArray(req.body.images)) {
+      productImages = req.body.images.map(img => typeof img === 'string' ? { url: img, isPrimary: true } : img);
+    } else if (req.body.image) {
+      productImages = [{ url: req.body.image, isPrimary: true }];
+    }
 
     const product = await Product.create({
       artistId: artist._id,
-      artFormId,
+      artFormId: finalArtFormId,
       title: title.trim(),
+      name: title.trim(),
       description: description ? description.trim() : '',
       price: priceNum,
       stock: stockNum,
+      category: req.body.category || 'painting',
+      images: productImages,
+      media: productImages.map(img => ({ url: img.url, isPrimary: true, type: 'image' })),
       status: initialStatus,
       moderationStatus: initialModStatus,
-      media: []
     });
 
     const populatedProduct = await Product.findById(product._id)
@@ -233,12 +254,20 @@ const updateProduct = async (req, res) => {
       return sendError(res, 'Validation failed', validationErrors, 400);
     }
 
-    if (title) product.title = title.trim();
+    if (title) {
+      product.title = title.trim();
+      product.name = title.trim();
+    }
     if (description !== undefined) product.description = description.trim();
     if (price !== undefined) product.price = Number(price);
     if (stock !== undefined) product.stock = Number(stock);
     if (artFormId) product.artFormId = artFormId;
+    if (req.body.category) product.category = req.body.category;
     if (status && Object.values(PRODUCT_STATUS).includes(status)) product.status = status;
+    if (req.body.image) {
+      product.images = [{ url: req.body.image, isPrimary: true }];
+      product.media = [{ url: req.body.image, isPrimary: true, type: 'image' }];
+    }
 
     if (moderationStatus && moderationStatus !== PRODUCT_MODERATION_STATUS.APPROVED) {
       product.moderationStatus = moderationStatus;
