@@ -6,6 +6,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:6789',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'http://localhost:6789',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   css: {
     postcss: {

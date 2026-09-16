@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Header({ 
   activePortal, 
@@ -8,6 +9,8 @@ export default function Header({
   cartCount = 0,
   onOpenCart 
 }) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const dropdownRef = useRef(null);
@@ -154,11 +157,13 @@ export default function Header({
               <div className="portal-user-dropdown" role="menu">
                 <div className="portal-dropdown-header">
                   <p className="font-title-md text-xs font-bold text-on-surface leading-tight">
-                    {activePortal === 'public' ? 'Aarav Mehta' : 'The Heritage School & Global Academy'}
+                    {user?.name || (activePortal === 'public' ? 'Patron' : 'Institution')}
                   </p>
-                  <p className="font-label-caps text-[10px] text-primary font-semibold mt-0.5">
-                    {activePortal === 'public' ? 'Sahasra Patron Tier' : 'Institutional Stewardship Tier I'}
-                  </p>
+                  {user?.email && (
+                    <p className="font-label-caps text-[10px] text-primary font-semibold mt-0.5">
+                      {user.email}
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -173,28 +178,20 @@ export default function Header({
                   <span>Account / Profile</span>
                 </button>
 
+                <div className="portal-dropdown-divider" />
+
                 <button
                   type="button"
                   onClick={() => {
                     setUserDropdownOpen(false);
-                    alert(activePortal === 'public' ? 'Patron Sanctuary Settings' : 'Institutional Governance Settings');
+                    logout();
+                    navigate('/login');
                   }}
-                  className="portal-dropdown-link"
-                >
-                  <span className="material-symbols-outlined text-[16px]">settings</span>
-                  <span>Settings</span>
-                </button>
-
-                <div className="portal-dropdown-divider" />
-
-                <Link
-                  to="/login"
-                  onClick={() => setUserDropdownOpen(false)}
-                  className="portal-dropdown-link text-on-surface-variant hover:text-primary"
+                  className="portal-dropdown-link text-on-surface-variant hover:text-primary w-full text-left"
                 >
                   <span className="material-symbols-outlined text-[16px]">logout</span>
                   <span>Sign Out</span>
-                </Link>
+                </button>
               </div>
             )}
           </div>

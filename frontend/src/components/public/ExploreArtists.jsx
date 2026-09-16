@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import ArtistBioModal from './ArtistBioModal';
 
-export default function ExploreArtists({ artists, followedArtistIds, onToggleFollow }) {
+export default function ExploreArtists({ artists = [], followedArtistIds, onToggleFollow }) {
   const [selectedTradition, setSelectedTradition] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeModalArtist, setActiveModalArtist] = useState(null);
 
-  const traditions = ['All', 'Warli Folk Tradition', 'Gond Pardhan Art', 'Mithila / Madhubani', 'Odisha Pattachitra', 'Sohrai & Khovar Murals'];
+  const traditions = ['All', ...Array.from(new Set(artists.map((a) => a.tradition).filter(Boolean)))];
 
   const filteredArtists = artists.filter(artist => {
     const matchesTradition = selectedTradition === 'All' || artist.tradition === selectedTradition;
@@ -29,13 +29,16 @@ export default function ExploreArtists({ artists, followedArtistIds, onToggleFol
             Meet the Master Custodians
           </h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Connect directly with verified hereditary practitioners. 100% of follower patronage and commission proceeds reach the artist.
+            Connect directly with verified hereditary practitioners.
           </p>
         </div>
 
         {/* Search input */}
         <div className="relative w-full md:w-72">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+          <span
+            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]"
+            style={{ pointerEvents: 'none' }}
+          >
             search
           </span>
           <input
@@ -43,7 +46,8 @@ export default function ExploreArtists({ artists, followedArtistIds, onToggleFol
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search master artists, clan..."
-            className="w-full pl-9 pr-4 py-2 rounded-full bg-surface-container text-xs text-on-surface placeholder:text-outline border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full pr-4 py-2 rounded-full bg-surface-container text-xs text-on-surface placeholder:text-outline border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
+            style={{ paddingLeft: '38px' }}
           />
         </div>
       </div>
@@ -70,14 +74,12 @@ export default function ExploreArtists({ artists, followedArtistIds, onToggleFol
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredArtists.map((artist) => {
           const isFollowing = followedArtistIds.includes(artist.id);
-          const currentFollowers = artist.followersCount + (isFollowing && !artist.isFollowing ? 1 : (!isFollowing && artist.isFollowing ? -1 : 0));
 
           return (
             <ArtistCard
               key={artist.id}
               artist={artist}
               isFollowing={isFollowing}
-              currentFollowers={currentFollowers}
               onSelectBio={(art) => setActiveModalArtist(art)}
               onToggleFollow={onToggleFollow}
             />
@@ -111,7 +113,7 @@ export default function ExploreArtists({ artists, followedArtistIds, onToggleFol
   );
 }
 
-function ArtistCard({ artist, isFollowing, currentFollowers, onSelectBio, onToggleFollow }) {
+function ArtistCard({ artist, isFollowing, onSelectBio, onToggleFollow }) {
   const [imageError, setImageError] = useState(false);
 
   return (
@@ -164,16 +166,10 @@ function ArtistCard({ artist, isFollowing, currentFollowers, onSelectBio, onTogg
           </p>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-surface-container-low mb-4 text-center">
-          <div>
-            <span className="text-[10px] font-label-caps text-outline uppercase block">Experience</span>
-            <span className="text-xs font-bold text-on-surface">{artist.experience}</span>
-          </div>
-          <div>
-            <span className="text-[10px] font-label-caps text-outline uppercase block">Active Patrons</span>
-            <span className="text-xs font-bold text-primary">{currentFollowers.toLocaleString()}</span>
-          </div>
+        {/* Stats row — real fields only; the backend does not track a follower count */}
+        <div className="p-2.5 rounded-xl bg-surface-container-low mb-4 text-center">
+          <span className="text-[10px] font-label-caps text-outline uppercase block">Experience</span>
+          <span className="text-xs font-bold text-on-surface">{artist.experience}</span>
         </div>
       </div>
 

@@ -1,11 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, Search, Bell, X } from 'lucide-react';
-import { ARTIST_PROFILE } from '../../data/artisanMockData';
+import { useAuth } from '../../context/AuthContext';
+import artisanService from '../../services/artisanService';
 
 export default function ArtisanHeader({ onOpenSidebar }) {
+  const { user } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayName, setDisplayName] = useState(user?.name || 'Artisan');
+  const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [verificationStatus, setVerificationStatus] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadArtistIdentity() {
+      try {
+        const res = await artisanService.getProfile();
+        const data = res?.data;
+        if (mounted && data) {
+          setDisplayName(data.displayName || user?.name || 'Artisan');
+          setAvatar(data.profileImage || data.userId?.avatar || user?.avatar || '');
+          setVerificationStatus(data.verificationStatus || '');
+        }
+      } catch (err) {
+        console.warn('Could not load artist identity for header:', err.message);
+      }
+    }
+    loadArtistIdentity();
+    return () => { mounted = false; };
+  }, [user]);
 
   const mockAlerts = [
     { id: 1, text: 'New institutional inquiry from NGMA Delhi', time: '10m ago' },
@@ -223,7 +247,7 @@ export default function ArtisanHeader({ onOpenSidebar }) {
                 lineHeight: 1.2,
               }}
             >
-              {ARTIST_PROFILE.name}
+              {displayName}
             </div>
             <div
               style={{
@@ -231,22 +255,43 @@ export default function ArtisanHeader({ onOpenSidebar }) {
                 fontSize: '10px',
                 color: 'var(--color-outline)',
                 letterSpacing: '0.04em',
+                textTransform: 'capitalize',
               }}
             >
-              {ARTIST_PROFILE.title}
+              {verificationStatus || 'Artisan'}
             </div>
           </div>
-          <img
-            src={ARTIST_PROFILE.avatar}
-            alt="Artist Avatar"
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '2px solid var(--color-surface-container-highest)',
-            }}
-          />
+          {avatar ? (
+            <img
+              src={avatar}
+              alt="Artist Avatar"
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid var(--color-surface-container-highest)',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                border: '2px solid var(--color-surface-container-highest)',
+                backgroundColor: 'var(--color-surface-container-high)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--color-on-surface)',
+              }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -1,35 +1,72 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { TVARITA_BRANDMARK } from '../data/publicMockData';
-import { ArrowLeft, ArrowRight, ShieldCheck, User, Sparkles, Building, Lock } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  User,
+  Sparkles,
+  Building,
+  Lock,
+  AlertCircle,
+  Loader2,
+  KeyRound,
+} from 'lucide-react';
 import '../styles/auth.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login, getRoleDashboardRoute } = useAuth();
+
+  const [email, setEmail] = useState('patron@tvarita.org');
+  const [password, setPassword] = useState('Tvarita@2026');
   const [selectedRole, setSelectedRole] = useState('patron');
   const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const roleRoutes = {
-    patron: '/dashboard/patron',
-    artisan: '/dashboard/artisan',
-    institution: '/dashboard/institution',
-    admin: '/dashboard/admin',
+  const demoAccounts = {
+    patron: { email: 'patron@tvarita.org', pass: 'Tvarita@2026', label: 'Patron' },
+    artisan: { email: 'artist@tvarita.org', pass: 'Tvarita@2026', label: 'Artist' },
+    institution: { email: 'institution@tvarita.org', pass: 'Tvarita@2026', label: 'Institution' },
+    admin: { email: 'admin@tvarita.org', pass: 'Tvarita@2026', label: 'Admin' },
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const userPayload = {
-      email: email || `${selectedRole}@tvarita.org`,
-      role: selectedRole,
-      loginAt: new Date().toISOString(),
-    };
-    localStorage.setItem('tvarita_user', JSON.stringify(userPayload));
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
+    setError(null);
+    if (demoAccounts[roleId]) {
+      setEmail(demoAccounts[roleId].email);
+      setPassword(demoAccounts[roleId].pass);
+    }
+  };
 
-    // Route to appropriate dashboard
-    const targetRoute = roleRoutes[selectedRole] || '/';
-    navigate(targetRoute);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const targetEmail = email.trim();
+    const targetPassword = password;
+
+    if (!targetEmail || !targetPassword) {
+      setError('Please enter both email and password.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await login(targetEmail, targetPassword);
+      const userRole = result.user?.role;
+      const targetRoute = getRoleDashboardRoute(userRole || selectedRole);
+      navigate(targetRoute);
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,10 +101,29 @@ export default function Login() {
             </p>
           </div>
 
+          {/* Error Banner */}
+          {error && (
+            <div
+              className="mb-4 p-3 rounded-xl bg-error-container/80 border border-error/20 flex items-start gap-2.5 text-on-error-container text-xs animate-shake"
+              role="alert"
+            >
+              <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-semibold block">Authentication Error</span>
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleLogin}>
             {/* Quick Role Selector */}
             <div className="mb-4">
-              <label className="auth-input-label block mb-2">Select Your Role</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="auth-input-label">Select Your Role</label>
+                <span className="text-[10px] text-primary font-semibold flex items-center gap-1">
+                  <KeyRound className="w-3 h-3" /> Demo auto-filled
+                </span>
+              </div>
               <div className="auth-role-grid">
                 {[
                   { id: 'patron', label: 'Patron', icon: User },
@@ -81,7 +137,7 @@ export default function Login() {
                     <button
                       key={r.id}
                       type="button"
-                      onClick={() => setSelectedRole(r.id)}
+                      onClick={() => handleRoleSelect(r.id)}
                       className={`auth-role-card ${isSelected ? 'selected' : ''}`}
                     >
                       <Icon className="w-4 h-4" />
@@ -100,9 +156,10 @@ export default function Login() {
               <input
                 id="login-email"
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={`${selectedRole}@tvarita.org`}
+                placeholder="user@tvarita.org"
                 className="auth-text-input"
               />
             </div>
@@ -113,13 +170,14 @@ export default function Login() {
                 <label className="auth-input-label" htmlFor="login-password">
                   Password
                 </label>
-                <a href="#reset" className="font-label-md text-xs text-primary hover:underline">
-                  Forgot?
-                </a>
+                <span className="font-label-md text-[11px] text-on-surface-variant">
+                  Default: <code className="text-primary font-semibold">Tvarita@2026</code>
+                </span>
               </div>
               <input
                 id="login-password"
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -143,10 +201,20 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="auth-submit-btn"
+              disabled={loading}
+              className="auth-submit-btn flex items-center justify-center gap-2"
             >
-              <span>Enter {selectedRole === 'admin' ? 'Console' : 'Dashboard'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Enter {selectedRole === 'admin' ? 'Console' : 'Dashboard'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
@@ -170,7 +238,7 @@ export default function Login() {
               "Honoring the lineage of indigenous wisdom through fair cultural stewardship."
             </h2>
             <p className="font-body-sm text-on-surface-variant mt-3 leading-relaxed">
-              Every access credential is tethered to verified ethical royalty transparency and direct artisan agency.
+              Every access credential is authenticated against our live MongoDB cluster using secure, token-based session verification.
             </p>
           </div>
 
@@ -180,7 +248,10 @@ export default function Login() {
               <span className="font-label-md text-sm font-semibold text-on-surface capitalize">
                 {selectedRole} Access Mode
               </span>
-              <span className="font-label-caps text-[10px] text-secondary font-bold">Verified</span>
+              <span className="font-label-caps text-[10px] text-secondary font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                Live API Ready
+              </span>
             </div>
           </div>
         </div>

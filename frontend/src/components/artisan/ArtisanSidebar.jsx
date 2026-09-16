@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   User,
@@ -18,14 +19,13 @@ import {
 export default function ArtisanSidebar({ isOpen, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [requestsOpen, setRequestsOpen] = useState(true);
   const [productsOpen, setProductsOpen] = useState(true);
 
   const handleLogout = () => {
-    if (window.confirm('Do you want to sign out of the Artist Dashboard session?')) {
-      alert('You have safely signed out of the Artist Dashboard.');
-      navigate('/');
-    }
+    logout();
+    navigate('/login');
   };
 
   const isCurrent = (path) => {

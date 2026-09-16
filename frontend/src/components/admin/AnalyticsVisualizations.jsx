@@ -1,297 +1,279 @@
-import React from 'react';
-import { ADMIN_ANALYTICS_DATA } from '../../data/adminMockData';
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import adminService from '../../services/adminService';
+
+const PALETTE = ['var(--color-primary)', 'var(--color-secondary)', 'var(--color-tertiary)', 'var(--color-primary-container)', 'var(--color-secondary-container)'];
+
+function Card({ children, span }) {
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--color-surface-container-lowest)',
+        padding: '2rem',
+        borderRadius: '1rem',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        gridColumn: span ? `span ${span}` : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function CardHeader({ label, title }) {
+  return (
+    <div>
+      <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>{label}</span>
+      <h3 className="font-headline-sm" style={{ color: 'var(--color-on-surface)', marginTop: '4px' }}>{title}</h3>
+    </div>
+  );
+}
+
+function DistributionRow({ label, count, total, color }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+        <span style={{ fontWeight: 600, color: 'var(--color-on-surface)', textTransform: 'capitalize' }}>{label}</span>
+        <span style={{ fontFamily: 'monospace', color: 'var(--color-tertiary)' }}>{count} ({pct}%)</span>
+      </div>
+      <div style={{ width: '100%', backgroundColor: 'var(--color-surface-container-low)', height: '10px', borderRadius: '9999px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: color, height: '100%', borderRadius: '9999px', width: `${pct}%`, transition: 'width 1s ease' }} />
+      </div>
+    </div>
+  );
+}
 
 export default function AnalyticsVisualizations() {
+  const [overview, setOverview] = useState(null);
+  const [artistAnalytics, setArtistAnalytics] = useState(null);
+  const [artFormAnalytics, setArtFormAnalytics] = useState(null);
+  const [engagement, setEngagement] = useState(null);
+  const [revenue, setRevenue] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function fetchAll() {
+      setLoading(true);
+      setError(null);
+      const [ovRes, artRes, afRes, engRes, revRes] = await Promise.allSettled([
+        adminService.getAnalyticsOverview(),
+        adminService.getArtistAnalytics(),
+        adminService.getArtFormAnalytics(),
+        adminService.getEngagementAnalytics(),
+        adminService.getRevenueAnalytics(),
+      ]);
+      if (!mounted) return;
+
+      if (ovRes.status === 'fulfilled') setOverview(ovRes.value?.data || ovRes.value);
+      if (artRes.status === 'fulfilled') setArtistAnalytics(artRes.value?.data || artRes.value);
+      if (afRes.status === 'fulfilled') setArtFormAnalytics(afRes.value?.data || afRes.value);
+      if (engRes.status === 'fulfilled') setEngagement(engRes.value?.data || engRes.value);
+      if (revRes.status === 'fulfilled') setRevenue(revRes.value?.data || revRes.value);
+
+      const failures = [ovRes, artRes, afRes, engRes, revRes].filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        setError('Some analytics data could not be loaded.');
+      }
+      setLoading(false);
+    }
+    fetchAll();
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-outline)', padding: '3rem', justifyContent: 'center' }}>
+        <Loader2 size={20} className="animate-spin" />
+        Loading platform analytics...
+      </div>
+    );
+  }
+
+  const usersByRole = overview?.usersByRole || {};
+  const totalUsers = Object.values(usersByRole).reduce((a, b) => a + b, 0);
+
+  const artistsByStatus = overview?.artistsByStatus || {};
+  const totalArtistsOverview = Object.values(artistsByStatus).reduce((a, b) => a + b, 0);
+
+  const financials = overview?.financials || { bookingRevenue: 0, productRevenue: 0, totalRevenue: 0 };
+
+  const artForms = artFormAnalytics?.artForms || [];
+  const maxArtistCount = Math.max(1, ...artForms.map((f) => f.artistCount || 0));
+
+  const topEarners = artistAnalytics?.topEarners || [];
+
+  const requestsByStatus = engagement?.requestsByStatus || {};
+  const totalRequests = Object.values(requestsByStatus).reduce((a, b) => a + b, 0);
+
+  const eventsByType = engagement?.eventsByType || {};
+  const totalEventsByType = Object.values(eventsByType).reduce((a, b) => a + b, 0);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-      {/* Top Grid: 24-Month Growth Curve & Regional Donut */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* Chart 1: 24-Month Cumulative Direct Artisan Honorarium Growth (Area/Line) */}
+      {error && (
         <div
           style={{
-            backgroundColor: 'var(--color-surface-container-lowest)',
-            padding: '2rem',
-            borderRadius: '1rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gridColumn: 'span 2',
+            padding: '10px 14px',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--color-primary-container)',
+            color: 'var(--color-on-primary-container)',
+            fontSize: '13px',
           }}
         >
-          <div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '1.5rem' }}>
-              <div>
-                <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                  Macro Economic Trajectory
-                </span>
-                <h3 className="font-headline-sm" style={{ color: 'var(--color-on-surface)', marginTop: '4px' }}>
-                  Cumulative Direct Artisan Honorarium Growth (24 Mo.)
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '11px', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-primary)' }} />
-                  Marketplace Sales
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-secondary)' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-secondary)' }} />
-                  Institutional Residencies
-                </span>
-              </div>
-            </div>
-
-            {/* Inline SVG Chart from admin.html */}
-            <div style={{ width: '100%', height: '260px', position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
-              <svg
-                viewBox="0 0 700 220"
-                preserveAspectRatio="none"
-                fill="none"
-                style={{ width: '100%', height: '100%' }}
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {/* Hairlines */}
-                <line x1="0" y1="40" x2="700" y2="40" stroke="#eae8e2" strokeDasharray="4 4" strokeWidth="1" />
-                <line x1="0" y1="90" x2="700" y2="90" stroke="#eae8e2" strokeDasharray="4 4" strokeWidth="1" />
-                <line x1="0" y1="140" x2="700" y2="140" stroke="#eae8e2" strokeDasharray="4 4" strokeWidth="1" />
-                <line x1="0" y1="190" x2="700" y2="190" stroke="#eae8e2" strokeDasharray="4 4" strokeWidth="1" />
-
-                {/* Fill Area Under Curve */}
-                <path
-                  d="M0 200 L40 185 L90 178 L150 160 L210 155 L270 142 L330 130 L390 115 L450 90 L520 70 L580 50 L640 32 L700 18 L700 210 L0 210 Z"
-                  fill="rgba(255, 219, 207, 0.45)"
-                />
-
-                {/* Growth Line 1 (Marketplace) */}
-                <path
-                  d="M0 200 Q40 185, 90 178 T210 155 T330 130 T450 90 T580 50 T700 18"
-                  stroke="#9f3c16"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-
-                {/* Growth Line 2 (Residencies) */}
-                <path
-                  d="M0 208 Q60 198, 120 190 T240 175 T360 150 T480 120 T600 88 T700 58"
-                  stroke="#516255"
-                  strokeWidth="2.5"
-                  strokeDasharray="6 3"
-                  strokeLinecap="round"
-                />
-
-                {/* Active Checkpoint Dots */}
-                <circle cx="210" cy="155" r="4" fill="#9f3c16" />
-                <circle cx="450" cy="90" r="4" fill="#9f3c16" />
-                <circle cx="700" cy="18" r="5" fill="#9f3c16" />
-              </svg>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              paddingTop: '1rem',
-              fontFamily: 'monospace',
-              fontSize: '10px',
-              color: 'var(--color-outline)',
-              textTransform: 'uppercase',
-            }}
-          >
-            <span>Month 01 (Inception)</span>
-            <span>Month 06</span>
-            <span>Month 12 (GI Integration)</span>
-            <span>Month 18 (Corporate Guilds)</span>
-            <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>Month 24 (Current ₹6.82 Cr)</span>
-          </div>
+          {error}
         </div>
+      )}
 
-        {/* Chart 2: Regional Folk Dispersion Donut Chart */}
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface-container-lowest)',
-            padding: '2rem',
-            borderRadius: '1rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-              Geographical Dispersion
-            </span>
-            <h3 className="font-headline-sm" style={{ color: 'var(--color-on-surface)', marginTop: '4px' }}>
-              Artisan Guild Registry
-            </h3>
+      {/* Row 1: Users by Role & Revenue Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+        <Card>
+          <CardHeader label="Platform Composition" title="Users by Role" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {Object.keys(usersByRole).length === 0 ? (
+              <span style={{ color: 'var(--color-outline)', fontSize: '13px' }}>No user data available.</span>
+            ) : (
+              Object.entries(usersByRole).map(([role, count], idx) => (
+                <DistributionRow key={role} label={role} count={count} total={totalUsers} color={PALETTE[idx % PALETTE.length]} />
+              ))
+            )}
           </div>
+        </Card>
 
-          {/* SVG Donut Chart from admin.html */}
-          <div
-            style={{
-              position: 'relative',
-              width: '190px',
-              height: '190px',
-              margin: '1.25rem auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg
-              viewBox="0 0 100 100"
-              style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
-            >
-              {/* Background Ring */}
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#eae8e2" strokeWidth="12" />
-
-              {/* Gond: 36% */}
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-                stroke="#9f3c16"
-                strokeWidth="12"
-                strokeDasharray="90.5 251.3"
-                strokeDashoffset="0"
-              />
-
-              {/* Warli: 28% */}
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-                stroke="#516255"
-                strokeWidth="12"
-                strokeDasharray="70.4 251.3"
-                strokeDashoffset="-90.5"
-              />
-
-              {/* Pichwai: 20% */}
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-                stroke="#635b4f"
-                strokeWidth="12"
-                strokeDasharray="50.3 251.3"
-                strokeDashoffset="-160.9"
-              />
-
-              {/* Pattachitra & Bhil: 16% */}
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-                stroke="#bf542c"
-                strokeWidth="12"
-                strokeDasharray="40.2 251.3"
-                strokeDashoffset="-211.2"
-              />
-            </svg>
-
-            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <span className="font-display-hero" style={{ fontSize: '28px', lineHeight: '32px', color: 'var(--color-on-surface)' }}>
-                1,482
-              </span>
-              <span className="font-label-caps" style={{ fontSize: '9px', color: 'var(--color-outline)' }}>
-                Custodians
-              </span>
-            </div>
+        <Card>
+          <CardHeader label="Artist Verification" title="Artists by Status" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {Object.keys(artistsByStatus).length === 0 ? (
+              <span style={{ color: 'var(--color-outline)', fontSize: '13px' }}>No artist data available.</span>
+            ) : (
+              Object.entries(artistsByStatus).map(([status, count], idx) => (
+                <DistributionRow key={status} label={status} count={count} total={totalArtistsOverview} color={PALETTE[idx % PALETTE.length]} />
+              ))
+            )}
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px' }}>
-            {ADMIN_ANALYTICS_DATA.regionalDispersion.map((item, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color }} />
-                  <span>{item.name}</span>
-                </div>
-                <span style={{ fontWeight: 700, color: 'var(--color-on-surface)' }}>{item.percentage}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Chart 3: Workshop Attendance & Masterclass Hours by Tradition */}
-      <div
-        style={{
-          backgroundColor: 'var(--color-surface-container-lowest)',
-          padding: '2rem',
-          borderRadius: '1rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.25rem',
-        }}
-      >
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div>
-            <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-              Student &amp; Corporate Cohorts
-            </span>
-            <h3 className="font-headline-sm" style={{ color: 'var(--color-on-surface)', marginTop: '4px' }}>
-              Workshop Attendance &amp; Masterclass Hours by Tradition
-            </h3>
+      {/* Row 2: Financials & Revenue */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+        <Card>
+          <CardHeader label="Confirmed / Paid Revenue" title="Financial Overview" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <StatRow label="Booking Revenue" value={financials.bookingRevenue} />
+            <StatRow label="Product Revenue" value={financials.productRevenue} />
+            <StatRow label="Total Revenue" value={financials.totalRevenue} emphasize />
           </div>
+        </Card>
 
-          <span
-            style={{
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              backgroundColor: 'var(--color-surface-container-high)',
-              fontFamily: 'var(--font-sans)',
-              fontSize: '12px',
-              fontWeight: 600,
-            }}
-          >
-            148,900 Total Enrolled Learners
-          </span>
-        </div>
+        <Card>
+          <CardHeader label="Paid vs. Pending" title="Revenue Breakdown" />
+          {revenue ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <StatRow label="Total Revenue (Paid)" value={revenue.totalRevenue} emphasize />
+              <StatRow label="Pending Revenue" value={revenue.pendingRevenue} />
+              <StatRow label="Bookings — Paid" value={revenue.breakdown?.bookings?.paid} />
+              <StatRow label="Bookings — Pending" value={revenue.breakdown?.bookings?.pending} />
+              <StatRow label="Products — Paid" value={revenue.breakdown?.products?.paid} />
+              <StatRow label="Products — Pending" value={revenue.breakdown?.products?.pending} />
+            </div>
+          ) : (
+            <span style={{ color: 'var(--color-outline)', fontSize: '13px' }}>Revenue data unavailable.</span>
+          )}
+        </Card>
+      </div>
 
+      {/* Row 3: Art Form Distribution */}
+      <Card>
+        <CardHeader label="Cultural Taxonomy" title="Art Form Distribution (Artists & Products)" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '4px' }}>
-          {ADMIN_ANALYTICS_DATA.workshopAttendance.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>{item.tradition}</span>
-                <span style={{ fontFamily: 'monospace', color: 'var(--color-tertiary)' }}>{item.stats}</span>
+          {artForms.length === 0 ? (
+            <span style={{ color: 'var(--color-outline)', fontSize: '13px' }}>No art form data available.</span>
+          ) : (
+            artForms.map((af, idx) => (
+              <div key={af.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>{af.name}</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--color-tertiary)' }}>
+                    {af.artistCount} artists • {af.productCount} products
+                  </span>
+                </div>
+                <div style={{ width: '100%', backgroundColor: 'var(--color-surface-container-low)', height: '12px', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      backgroundColor: PALETTE[idx % PALETTE.length],
+                      height: '100%',
+                      borderRadius: '9999px',
+                      width: `${Math.round(((af.artistCount || 0) / maxArtistCount) * 100)}%`,
+                      transition: 'width 1s ease',
+                    }}
+                  />
+                </div>
               </div>
-              <div
-                style={{
-                  width: '100%',
-                  backgroundColor: 'var(--color-surface-container-low)',
-                  height: '12px',
-                  borderRadius: '9999px',
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    backgroundColor: item.color,
-                    height: '100%',
-                    borderRadius: '9999px',
-                    width: item.width,
-                    transition: 'width 1s ease',
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
+      </Card>
+
+      {/* Row 4: Top Earning Artists & Engagement */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+        <Card>
+          <CardHeader label="Booking Performance" title="Top Earning Artists" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {topEarners.length === 0 ? (
+              <span style={{ color: 'var(--color-outline)', fontSize: '13px' }}>No booking earnings recorded yet.</span>
+            ) : (
+              topEarners.map((artist) => (
+                <div key={artist.artistId} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--color-surface-container-low)' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-on-surface)' }}>{artist.displayName}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-outline)' }}>{artist.bookingsCount} bookings</div>
+                  </div>
+                  <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{artist.totalEarned?.toLocaleString?.() ?? artist.totalEarned}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader label="Community Activity" title="Engagement Snapshot" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <StatRow label="Total Follows" value={engagement?.totalFollows} emphasize />
+            {Object.keys(requestsByStatus).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>Requests by Status</span>
+                {Object.entries(requestsByStatus).map(([status, count], idx) => (
+                  <DistributionRow key={status} label={status} count={count} total={totalRequests} color={PALETTE[idx % PALETTE.length]} />
+                ))}
+              </div>
+            )}
+            {Object.keys(eventsByType).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>Events by Type</span>
+                {Object.entries(eventsByType).map(([type, count], idx) => (
+                  <DistributionRow key={type} label={type} count={count} total={totalEventsByType} color={PALETTE[idx % PALETTE.length]} />
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
+    </div>
+  );
+}
+
+function StatRow({ label, value, emphasize }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--color-surface-container-low)' }}>
+      <span style={{ fontSize: '13px', fontWeight: emphasize ? 700 : 500, color: 'var(--color-on-surface)' }}>{label}</span>
+      <span style={{ fontSize: '13px', fontWeight: 700, color: emphasize ? 'var(--color-primary)' : 'var(--color-on-surface-variant)' }}>
+        {value !== undefined && value !== null ? value.toLocaleString?.() ?? value : '—'}
+      </span>
     </div>
   );
 }

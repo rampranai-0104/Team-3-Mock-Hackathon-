@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminManagementView from '../../components/admin/AdminManagementView';
 import TaxonomyTree from '../../components/admin/TaxonomyTree';
-import { ADMIN_ART_FORMS_LIST } from '../../data/adminMockData';
-import { Palette, Layers, MapPin, CheckCircle2, X } from 'lucide-react';
+import adminService from '../../services/adminService';
+import { Palette, Layers, CheckCircle2, X, Loader2 } from 'lucide-react';
 
 /**
- * AdminArtFormsPage - Core Feature 2: Art Forms Module
- * Encompasses Art Forms, Traditions, Regions, Materials, Techniques, Cultural Taxonomy.
+ * AdminArtFormsPage - Art Forms Module
+ * Wired to real backend: GET/POST/PATCH/DELETE /api/admin/art-forms (multipart image upload).
  */
 export default function AdminArtFormsPage() {
-  const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'taxonomy' | 'regions'
-  const [forms, setForms] = useState(ADMIN_ART_FORMS_LIST);
+  const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'taxonomy'
+  const [forms, setForms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedForm, setSelectedForm] = useState(null);
-  const [modalMode, setModalMode] = useState(null); // 'add' | 'edit' | 'tradition' | 'region'
+  const [modalMode, setModalMode] = useState(null); // 'add' | 'edit'
+  const [formData, setFormData] = useState({});
+  const [imageFile, setImageFile] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [actionNotice, setActionNotice] = useState(null);
 
   const showNotice = (msg) => {
@@ -20,58 +25,124 @@ export default function AdminArtFormsPage() {
     setTimeout(() => setActionNotice(null), 3500);
   };
 
-  const handleArchiveForm = (row) => {
-    const updatedStatus = row.status === 'Archived' ? 'Canonical Protected' : 'Archived';
-    setForms((prev) =>
-      prev.map((f) => (f.id === row.id ? { ...f, status: updatedStatus } : f))
-    );
-    showNotice(`Tradition "${row.title}" status changed to ${updatedStatus}.`);
+  const fetchForms = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminService.getArtForms({ limit: 100 });
+      const data = res?.data || res;
+      setForms(Array.isArray(data?.artForms) ? data.artForms : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load art forms.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchForms();
+  }, [fetchForms]);
+
+  const openAdd = () => {
+    setSelectedForm(null);
+    setFormData({ name: '', description: '', regions: '', techniques: '', materials: '', status: 'active' });
+    setImageFile(null);
+    setModalMode('add');
+  };
+
+  const openEdit = (row) => {
+    setSelectedForm(row);
+    setFormData({
+      name: row.name || '',
+      description: row.description || '',
+      regions: (row.regions || []).join(', '),
+      techniques: (row.techniques || []).join(', '),
+      materials: (row.materials || []).join(', '),
+      status: row.status || 'active',
+    });
+    setImageFile(null);
+    setModalMode('edit');
+  };
+
+  const handleArchive = async (row) => {
+    if (!window.confirm(`Archive or remove "${row.name}"?`)) return;
+    try {
+      const res = await adminService.deleteArtForm(row._id);
+      const data = res?.data || res;
+      if (data?.status === 'inactive') {
+        setForms((prev) => prev.map((f) => (f._id === row._id ? { ...f, status: 'inactive' } : f)));
+        showNotice(`"${row.name}" is referenced by existing records and was archived.`);
+      } else {
+        setForms((prev) => prev.filter((f) => f._id !== row._id));
+        showNotice(`"${row.name}" was deleted.`);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to archive art form.');
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        regions: formData.regions ? formData.regions.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        techniques: formData.techniques ? formData.techniques.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        materials: formData.materials ? formData.materials.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        status: formData.status,
+      };
+      if (imageFile) payload.image = imageFile;
+
+      if (modalMode === 'add') {
+        const res = await adminService.createArtForm(payload);
+        const created = res?.data || res;
+        setForms((prev) => [created, ...prev]);
+        showNotice(`Art form "${formData.name}" created.`);
+      } else if (modalMode === 'edit' && selectedForm) {
+        const res = await adminService.updateArtForm(selectedForm._id, payload);
+        const updated = res?.data || res;
+        setForms((prev) => prev.map((f) => (f._id === selectedForm._id ? { ...f, ...updated } : f)));
+        showNotice(`Saved changes for "${formData.name}".`);
+      }
+      setSelectedForm(null);
+      setModalMode(null);
+    } catch (err) {
+      setError(err.message || 'Failed to save art form.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const columns = [
     {
-      header: 'Tradition / Art Form',
+      header: 'Art Form',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>{row.title}</div>
+          <div style={{ fontWeight: 600, color: 'var(--color-on-surface)' }}>{row.name}</div>
           <div style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', maxWidth: '280px', marginTop: '2px' }}>
-            {row.description}
+            {row.description || '—'}
           </div>
         </div>
       ),
     },
     {
-      header: 'Sacred Medium & Materials',
-      accessor: (row) => (
-        <span className="badge-editorial" style={{ backgroundColor: 'var(--color-surface-container)', color: 'var(--color-on-surface)' }}>
-          {row.tradition}
-        </span>
-      ),
+      header: 'Regions',
+      accessor: (row) => (row.regions || []).join(', ') || '—',
     },
     {
-      header: 'Origin & Region',
-      accessor: 'region',
+      header: 'Techniques',
+      accessor: (row) => (row.techniques || []).join(', ') || '—',
     },
     {
-      header: 'GI Legal Status',
-      accessor: (row) => (
-        <span className="badge-editorial" style={{ backgroundColor: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' }}>
-          {row.giStatus}
-        </span>
-      ),
-    },
-    {
-      header: 'Active Custodians',
-      accessor: (row) => `${row.activeArtisans} Registered`,
-    },
-    {
-      header: 'Protection Tier',
+      header: 'Status',
       accessor: (row) => (
         <span
           className="badge-editorial"
           style={{
-            backgroundColor: row.status === 'Archived' ? 'var(--color-surface-container-highest)' : 'var(--color-primary-container)',
-            color: row.status === 'Archived' ? 'var(--color-on-surface-variant)' : 'var(--color-on-primary-container)',
+            backgroundColor: row.status === 'active' ? 'var(--color-secondary-container)' : 'var(--color-surface-container-highest)',
+            color: row.status === 'active' ? 'var(--color-on-secondary-container)' : 'var(--color-on-surface-variant)',
+            textTransform: 'capitalize',
           }}
         >
           {row.status}
@@ -81,436 +152,159 @@ export default function AdminArtFormsPage() {
   ];
 
   const actions = [
-    {
-      label: 'Edit',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedForm(row);
-        setModalMode('edit');
-      },
-    },
-    {
-      label: 'Tradition',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedForm(row);
-        setModalMode('tradition');
-      },
-    },
-    {
-      label: 'Region',
-      variant: 'surface',
-      onClick: (row) => {
-        setSelectedForm(row);
-        setModalMode('region');
-      },
-    },
-    {
-      label: 'Archive',
-      variant: 'primary',
-      onClick: handleArchiveForm,
-    },
+    { label: 'Edit', variant: 'surface', onClick: openEdit },
+    { label: 'Archive/Delete', variant: 'primary', onClick: handleArchive },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-      {/* Header & Feature Context */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
         <div>
           <h1 className="font-headline-sm" style={{ color: 'var(--color-on-surface)' }}>
             Art Forms & Cultural Taxonomy
           </h1>
           <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-            Living Traditions, Sacred Mineral Pigment Formulae, Geographical Indications & Generational Ontologies
+            Living traditions, materials, techniques, and geographic origins
           </p>
         </div>
 
-        {/* Tab Selector */}
-        <div
-          style={{
-            display: 'flex',
-            backgroundColor: 'var(--color-surface-container-low)',
-            borderRadius: '9999px',
-            padding: '4px',
-            gap: '4px',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('registry')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'registry' ? 700 : 500,
-              backgroundColor: activeTab === 'registry' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'registry' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Palette size={16} />
-            <span>Art Forms Registry</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('taxonomy')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'taxonomy' ? 700 : 500,
-              backgroundColor: activeTab === 'taxonomy' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'taxonomy' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Layers size={16} />
-            <span>Cultural Taxonomy Tree</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('regions')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: activeTab === 'regions' ? 700 : 500,
-              backgroundColor: activeTab === 'regions' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'regions' ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <MapPin size={16} />
-            <span>Traditions & Regions</span>
-          </button>
+        <div style={{ display: 'flex', backgroundColor: 'var(--color-surface-container-low)', borderRadius: '9999px', padding: '4px', gap: '4px' }}>
+          <TabButton active={activeTab === 'registry'} onClick={() => setActiveTab('registry')} icon={<Palette size={16} />} label="Art Forms Registry" />
+          <TabButton active={activeTab === 'taxonomy'} onClick={() => setActiveTab('taxonomy')} icon={<Layers size={16} />} label="Cultural Taxonomy Tree" />
         </div>
       </div>
 
       {actionNotice && (
-        <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: '0.75rem',
-            backgroundColor: 'var(--color-secondary-container)',
-            color: 'var(--color-on-secondary-container)',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
+        <div style={{ padding: '12px 16px', borderRadius: '0.75rem', backgroundColor: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <CheckCircle2 size={18} />
           {actionNotice}
         </div>
       )}
 
-      {/* Tab 1: Art Forms Registry Table */}
+      {error && (
+        <div style={{ padding: '10px 14px', borderRadius: '0.75rem', backgroundColor: 'var(--color-primary-container)', color: 'var(--color-on-primary-container)', fontSize: '13px' }}>
+          {error}
+        </div>
+      )}
+
       {activeTab === 'registry' && (
-        <AdminManagementView
-          title="Living Indigenous Art Forms"
-          subtitle="Accredited Forms, Canonical Pigment Formulae & Legal Protection Tiers"
-          data={forms}
-          columns={columns}
-          actions={actions}
-          searchPlaceholder="Search art forms by title, tradition, region, or GI status..."
-          addLabel="Add Art Form"
-          onAdd={() => {
-            setSelectedForm({
-              title: '',
-              tradition: '',
-              region: '',
-              giStatus: 'Pending Registration',
-              activeArtisans: 0,
-              description: '',
-              status: 'Draft',
-            });
-            setModalMode('add');
-          }}
-        />
-      )}
-
-      {/* Tab 2: Cultural Taxonomy Tree */}
-      {activeTab === 'taxonomy' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div
-            style={{
-              padding: '1rem 1.25rem',
-              borderRadius: '0.75rem',
-              backgroundColor: 'var(--color-surface-container-low)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-on-surface)' }}>
-              Canonical Tree Taxonomy • Sacred Motifs, Pigment Formulations & Oral History Archive
-            </span>
-            <button
-              type="button"
-              className="btn-surface"
-              onClick={() => showNotice('Taxonomy validation passed. Canonical IDs synchronized.')}
-              style={{ padding: '6px 12px', fontSize: '12px' }}
-            >
-              Verify Canonical Hash
-            </button>
+        loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-outline)', padding: '2rem' }}>
+            <Loader2 size={18} className="animate-spin" /> Loading art forms...
           </div>
-
-          <TaxonomyTree />
-        </div>
+        ) : (
+          <AdminManagementView
+            title="Art Forms Registry"
+            subtitle="Traditions, Materials, Techniques & Regional Origins"
+            data={forms}
+            columns={columns}
+            actions={actions}
+            searchPlaceholder="Search art forms by name, region, or technique..."
+            filterKey="status"
+            filterOptions={['active', 'inactive', 'draft']}
+            addLabel="Add Art Form"
+            onAdd={openAdd}
+          />
+        )
       )}
 
-      {/* Tab 3: Traditions & Regions */}
-      {activeTab === 'regions' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              padding: '1.5rem',
-              borderRadius: '1rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <h3 className="font-headline-sm" style={{ fontSize: '20px', color: 'var(--color-on-surface)', marginBottom: '4px' }}>
-              Geographical Regions & Indigenous Material Mapping
-            </h3>
-            <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)', fontSize: '13px' }}>
-              Geographical indications (GI), tribal bedrock sources, organic pigment harvesting guidelines, and regional guild hubs.
-            </p>
+      {activeTab === 'taxonomy' && <TaxonomyTree />}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
-              {[
-                {
-                  region: 'North Sahyadri & Palghar, Maharashtra',
-                  artForm: 'Warli Pictography',
-                  materials: 'Geru mud plaster, rice flour binder, bamboo needle quill',
-                  gi: 'GI-IN-0391 (Registered 2014)',
-                  custodians: '384 Active Elders',
-                },
-                {
-                  region: 'Dindori, Mandla & Betul, Madhya Pradesh',
-                  artForm: 'Gond Chitrakala',
-                  materials: 'Peeli Mitti, Sukhi geru, Cow dung wash, Chhind leaf resin',
-                  gi: 'GI-IN-0442 (Registered 2018)',
-                  custodians: '512 Active Elders',
-                },
-                {
-                  region: 'Nathdwara, Udaipur, Rajasthan',
-                  artForm: 'Temple Pichwai',
-                  materials: 'Muslin cloth, 24K gold foil, Lapis lazuli, Kikar gum binder',
-                  gi: 'GI-IN-0089 (Accredited 2008)',
-                  custodians: '240 Master Craftsmen',
-                },
-                {
-                  region: 'Raghurajpur & Puri, Odisha',
-                  artForm: 'Tala Pattachitra',
-                  materials: 'Tala palm-leaf strips, iron needle stylus, lamp soot ink',
-                  gi: 'GI-IN-0022 (Registered 2005)',
-                  custodians: '346 Lineage Artists',
-                },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '1.25rem',
-                    borderRadius: '1rem',
-                    backgroundColor: 'var(--color-surface-container-low)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    border: '1px solid var(--color-surface-container-high)',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="badge-editorial" style={{ backgroundColor: 'var(--color-secondary-container)', color: 'var(--color-on-secondary-container)' }}>
-                        {item.gi}
-                      </span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)' }}>
-                        {item.custodians}
-                      </span>
-                    </div>
-
-                    <h4 className="font-headline-sm" style={{ fontSize: '17px', marginTop: '8px', color: 'var(--color-on-surface)' }}>
-                      {item.artForm}
-                    </h4>
-
-                    <div style={{ fontSize: '12px', color: 'var(--color-outline)', marginTop: '2px' }}>
-                      {item.region}
-                    </div>
-
-                    <div style={{ fontSize: '12px', color: 'var(--color-on-surface-variant)', marginTop: '8px', lineHeight: 1.5 }}>
-                      <strong>Natural Medium: </strong> {item.materials}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', paddingTop: '0.75rem', borderTop: '1px solid var(--color-surface-container)' }}>
-                    <button
-                      type="button"
-                      className="btn-surface"
-                      onClick={() => showNotice(`Managing region parameters for ${item.region}`)}
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px' }}
-                    >
-                      Manage Region
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => showNotice(`Tradition protocol opened for ${item.artForm}`)}
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      Tradition Docs
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Dialog for Add / Edit / Tradition / Region */}
-      {selectedForm && modalMode && (
+      {/* Modal */}
+      {modalMode && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-          onClick={() => setSelectedForm(null)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+          onClick={() => { setSelectedForm(null); setModalMode(null); }}
         >
           <div
-            style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              borderRadius: '1.25rem',
-              padding: '2rem',
-              maxWidth: '540px',
-              width: '100%',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-            }}
+            style={{ backgroundColor: 'var(--color-surface-container-lowest)', borderRadius: '1.25rem', padding: '2rem', maxWidth: '540px', width: '100%', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 className="font-headline-sm" style={{ fontSize: '20px', margin: 0 }}>
-                {modalMode === 'add' && 'Add New Indigenous Art Form'}
-                {modalMode === 'edit' && `Edit Art Form: ${selectedForm.title}`}
-                {modalMode === 'tradition' && `Manage Tradition: ${selectedForm.title}`}
-                {modalMode === 'region' && `Manage Region: ${selectedForm.region}`}
+                {modalMode === 'add' ? 'Add New Art Form' : `Edit Art Form: ${selectedForm?.name}`}
               </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedForm(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-outline)' }}
-              >
+              <button type="button" onClick={() => { setSelectedForm(null); setModalMode(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-outline)' }}>
                 <X size={20} />
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <FormField label="Name" value={formData.name} onChange={(v) => setFormData((f) => ({ ...f, name: v }))} />
+              <FormField label="Description" value={formData.description} onChange={(v) => setFormData((f) => ({ ...f, description: v }))} textarea />
+              <FormField label="Regions (comma-separated)" value={formData.regions} onChange={(v) => setFormData((f) => ({ ...f, regions: v }))} />
+              <FormField label="Techniques (comma-separated)" value={formData.techniques} onChange={(v) => setFormData((f) => ({ ...f, techniques: v }))} />
+              <FormField label="Materials (comma-separated)" value={formData.materials} onChange={(v) => setFormData((f) => ({ ...f, materials: v }))} />
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Title / Tradition Name</label>
-                <input
-                  type="text"
-                  defaultValue={selectedForm.title}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-surface-container-high)',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    fontSize: '13px',
-                    color: 'var(--color-on-surface)',
-                    marginTop: '4px',
-                  }}
-                />
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData((f) => ({ ...f, status: e.target.value }))}
+                  style={inputStyle}
+                >
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                  <option value="draft">draft</option>
+                </select>
               </div>
-
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Geographic Origin Region</label>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Image</label>
                 <input
-                  type="text"
-                  defaultValue={selectedForm.region}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-surface-container-high)',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    fontSize: '13px',
-                    color: 'var(--color-on-surface)',
-                    marginTop: '4px',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>Sacred Materials & Pigments</label>
-                <input
-                  type="text"
-                  defaultValue={selectedForm.tradition}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-surface-container-high)',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    fontSize: '13px',
-                    color: 'var(--color-on-surface)',
-                    marginTop: '4px',
-                  }}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                  style={{ ...inputStyle, padding: '6px' }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '1rem', borderTop: '1px solid var(--color-surface-container)' }}>
-              <button
-                type="button"
-                className="btn-surface"
-                onClick={() => setSelectedForm(null)}
-                style={{ padding: '8px 16px', fontSize: '13px' }}
-              >
+              <button type="button" className="btn-surface" onClick={() => { setSelectedForm(null); setModalMode(null); }} style={{ padding: '8px 16px', fontSize: '13px' }}>
                 Cancel
               </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  showNotice(`Saved changes for ${selectedForm.title || 'new art form'}.`);
-                  setSelectedForm(null);
-                }}
-                style={{ padding: '8px 18px', fontSize: '13px' }}
-              >
-                Save Art Form
+              <button type="button" className="btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', fontSize: '13px' }}>
+                {saving ? 'Saving...' : 'Save Art Form'}
               </button>
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: '8px 16px', borderRadius: '9999px', border: 'none', fontSize: '13px',
+        fontWeight: active ? 700 : 500,
+        backgroundColor: active ? 'var(--color-primary)' : 'transparent',
+        color: active ? 'var(--color-on-primary)' : 'var(--color-on-surface)',
+        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s',
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+const inputStyle = {
+  width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-surface-container-high)',
+  backgroundColor: 'var(--color-surface-container-lowest)', fontSize: '13px', color: 'var(--color-on-surface)', marginTop: '4px',
+};
+
+function FormField({ label, value, onChange, textarea }) {
+  return (
+    <div>
+      <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-on-surface)' }}>{label}</label>
+      {textarea ? (
+        <textarea value={value ?? ''} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, minHeight: '70px', resize: 'vertical' }} />
+      ) : (
+        <input type="text" value={value ?? ''} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
       )}
     </div>
   );

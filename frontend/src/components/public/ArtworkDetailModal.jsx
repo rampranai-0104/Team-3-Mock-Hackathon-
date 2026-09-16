@@ -21,13 +21,10 @@ export default function ArtworkDetailModal({ product, onClose, onAddToCart }) {
               ) : (
                 <div className="w-full h-64 rounded-lg bg-surface-container flex flex-col items-center justify-center text-outline gap-2">
                   <span className="material-symbols-outlined text-[36px]">palette</span>
-                  <span className="text-xs font-medium">Authentic Masterwork</span>
+                  <span className="text-xs font-medium">Artwork</span>
                 </div>
               )}
             </div>
-            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold mt-3">
-              Certified Master Guildpiece
-            </span>
           </div>
 
           {/* Details */}
@@ -52,20 +49,7 @@ export default function ArtworkDetailModal({ product, onClose, onAddToCart }) {
 
               <div className="space-y-2 mt-4 text-xs text-on-surface-variant">
                 <p><strong>Medium:</strong> {product.medium}</p>
-                <p><strong>Dimensions:</strong> {product.dimensions}</p>
-                <p><strong>GI Authentication:</strong> Certified Intangible Cultural Heritage Registry</p>
-                <p><strong>Stock Availability:</strong> {product.inStock} original signed pieces</p>
-              </div>
-
-              {/* Direct Royalty Pledge */}
-              <div className="mt-4 p-3 rounded-xl bg-primary-fixed/30 border border-primary/20 text-xs text-on-primary-fixed-variant">
-                <div className="flex items-center gap-1.5 font-bold mb-0.5 text-primary">
-                  <span className="material-symbols-outlined text-[16px]">verified</span>
-                  <span>100% Direct-to-Artisan Escrow</span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  {product.royaltyPledge}
-                </p>
+                <p><strong>Stock Available:</strong> {product.inStock}</p>
               </div>
             </div>
 

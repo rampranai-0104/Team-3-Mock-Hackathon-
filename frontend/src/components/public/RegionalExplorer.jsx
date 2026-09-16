@@ -88,9 +88,6 @@ export default function RegionalExplorer() {
                 <span className="font-label-caps text-[10px] text-primary font-bold">
                   {activeHotspot.tag}
                 </span>
-                <span className="font-label-caps text-[10px] text-secondary font-semibold bg-secondary-container px-2 py-0.5 rounded-full">
-                  Protected Terroir
-                </span>
               </div>
 
               <h3 className="font-headline-sm text-on-surface">
@@ -100,27 +97,6 @@ export default function RegionalExplorer() {
               <p className="font-body-sm text-on-surface-variant leading-relaxed">
                 {activeHotspot.desc}
               </p>
-
-              <div className="pt-3 grid grid-cols-3 gap-3 border-t border-outline-variant/30">
-                <div>
-                  <span className="font-label-caps text-[9px] text-outline block">Active Guilds</span>
-                  <span className="font-title-md text-on-surface font-semibold">
-                    {activeHotspot.guilds}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-label-caps text-[9px] text-outline block">Natural Dyes</span>
-                  <span className="font-title-md text-on-surface font-semibold">
-                    {activeHotspot.dyes}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-label-caps text-[9px] text-outline block">Avg Experience</span>
-                  <span className="font-title-md text-on-surface font-semibold">
-                    {activeHotspot.experience}
-                  </span>
-                </div>
-              </div>
             </div>
 
             {/* Bottom: Map Terroir Highlights Pin Bar */}

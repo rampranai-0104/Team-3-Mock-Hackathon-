@@ -86,8 +86,8 @@ export default function RequestsTracker({ requests }) {
                   <span className="font-medium text-on-surface">{req.cohortCount} Participants</span>
                 </div>
                 <div>
-                  <span className="text-outline block text-[10px] uppercase font-semibold">Direct Artisan Honorarium</span>
-                  <span className="font-bold text-primary">{req.artisanWages}</span>
+                  <span className="text-outline block text-[10px] uppercase font-semibold">Engagement Type</span>
+                  <span className="font-medium text-on-surface">{req.archetype}</span>
                 </div>
               </div>
             </div>
@@ -152,22 +152,17 @@ export default function RequestsTracker({ requests }) {
 
             <div className="p-6 space-y-4 text-xs">
               <div className="p-3 rounded-xl bg-surface-container-low space-y-1">
-                <p><strong>Organization:</strong> The Heritage School &amp; Global Academy</p>
                 <p><strong>Status:</strong> <span className="font-bold text-primary">{selectedRequest.status}</span></p>
                 <p><strong>Engagement:</strong> {selectedRequest.title}</p>
+                <p><strong>Tradition:</strong> {selectedRequest.tradition}</p>
                 <p><strong>Format &amp; Venue:</strong> {selectedRequest.format}</p>
+                <p><strong>Cohort:</strong> {selectedRequest.cohortCount} Participants</p>
+                <p><strong>Budget:</strong> {selectedRequest.budgetTotal}</p>
+                <p><strong>Submitted:</strong> {selectedRequest.submissionDate}</p>
+                {selectedRequest.message && (
+                  <p><strong>Notes:</strong> {selectedRequest.message}</p>
+                )}
               </div>
-
-              <div className="p-3 rounded-xl bg-secondary-container/40 text-on-secondary-container space-y-1">
-                <p className="font-bold text-sm">Escrow Allocation Breakdown:</p>
-                <p>• Total CSR Commitment: {selectedRequest.budgetTotal}</p>
-                <p>• 88.4% Direct Artisan Wire Remuneration: {selectedRequest.artisanWages}</p>
-                <p>• 11.6% Decentralized Provenance Audit &amp; Substrates</p>
-              </div>
-
-              <p className="text-on-surface-variant text-[11px] leading-relaxed">
-                This dossier is governed by Tvarita Arts Collective's 100% direct-to-artisan sovereign code. All funds are disbursed under 12A/80G certified audit trails.
-              </p>
             </div>
 
             <div className="p-4 px-6 border-t border-outline-variant/30 bg-surface-container-low flex justify-end gap-3">

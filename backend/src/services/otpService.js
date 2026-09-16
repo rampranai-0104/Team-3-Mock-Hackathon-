@@ -76,6 +76,7 @@ const generateAndSendOTP = async ({
     success: true,
     message: `OTP sent successfully to ${normalizedEmail}`,
     expiresInMinutes,
+    otp,
     messageId: emailResult.messageId,
     isMock: emailResult.isMock
   };

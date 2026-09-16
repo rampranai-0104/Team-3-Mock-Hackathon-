@@ -1,10 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import BookingModal from './BookingModal';
-import { learningJourneys } from '../../data/mockData';
+import publicService from '../../services/publicService';
 
-export default function UpcomingEvents({ workshops, onBookWorkshop }) {
+function mapLearningJourney(raw) {
+  const totalModules = raw.modules?.length || 0;
+  const totalMinutes = (raw.modules || []).reduce((acc, m) => acc + (m.durationMinutes || 0), 0);
+  return {
+    id: raw._id,
+    title: raw.title,
+    tradition: raw.artFormId?.name || 'Traditional Art',
+    instructor: raw.artistIds?.[0]?.displayName || 'Guild Faculty',
+    level: raw.level ? `${raw.level.charAt(0).toUpperCase()}${raw.level.slice(1)} Immersion` : 'Self-Paced Immersion',
+    totalModules,
+    // Per-learner progress isn't tracked by the backend LearningJourney model yet,
+    // so we surface the course as not-yet-started rather than fabricating progress.
+    completedModules: 0,
+    progressPercentage: 0,
+    currentModule: raw.modules?.[0]?.title || 'Module 1: Introduction',
+    nextAction: `Start Lesson: ${raw.modules?.[0]?.title || 'Introduction'}`,
+    duration: `${(totalMinutes / 60).toFixed(1)} Hours Content`,
+    image: raw.artFormId?.media?.[0]?.url || '',
+  };
+}
+
+export default function UpcomingEvents({ workshops = [], onBookWorkshop }) {
   const [activeSubTab, setActiveSubTab] = useState('workshops'); // 'workshops' | 'learning'
   const [bookingWorkshop, setBookingWorkshop] = useState(null);
+  const [learningJourneys, setLearningJourneys] = useState([]);
+  const [learningLoading, setLearningLoading] = useState(false);
+  const [learningError, setLearningError] = useState(null);
 
   // Live countdown timer simulation
   const [countdown, setCountdown] = useState({
@@ -32,6 +56,25 @@ export default function UpcomingEvents({ workshops, onBookWorkshop }) {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (activeSubTab !== 'learning' || learningJourneys.length > 0) return;
+    let mounted = true;
+    (async () => {
+      try {
+        setLearningLoading(true);
+        setLearningError(null);
+        const res = await publicService.getLearningJourneys();
+        const list = Array.isArray(res?.data) ? res.data : [];
+        if (mounted) setLearningJourneys(list.map(mapLearningJourney));
+      } catch (err) {
+        if (mounted) setLearningError(err.message || 'Unable to load learning journeys right now.');
+      } finally {
+        if (mounted) setLearningLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [activeSubTab, learningJourneys.length]);
 
   return (
     <div className="space-y-6">
@@ -82,106 +125,123 @@ export default function UpcomingEvents({ workshops, onBookWorkshop }) {
       {activeSubTab === 'workshops' ? (
         /* WORKSHOPS VIEW */
         <div className="space-y-6">
-          {/* FEATURED LIVE COUNTDOWN HERO WORKSHOP */}
-          <div className="bg-surface-container-low rounded-2xl p-6 lg:p-8 border border-outline-variant/30 shadow-sm relative overflow-hidden">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></span>
-                  <span className="font-label-caps text-xs text-primary font-bold uppercase tracking-wider">
-                    Next Atelier Live Masterclass
-                  </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-semibold">
-                    Pass ID: #{workshops[0].passId}
-                  </span>
-                </div>
+          {workshops.length === 0 ? (
+            <div className="text-center py-12 text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/20">
+              <span className="material-symbols-outlined text-outline text-[40px] mb-2">event_busy</span>
+              <p className="font-headline-sm text-base">No upcoming workshops published yet</p>
+              <p className="text-xs mt-1">Check back soon for new guild masterclasses.</p>
+            </div>
+          ) : (
+            <>
+              {/* FEATURED LIVE COUNTDOWN HERO WORKSHOP */}
+              <div className="bg-surface-container-low rounded-2xl p-6 lg:p-8 border border-outline-variant/30 shadow-sm relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                  <div className="max-w-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></span>
+                      <span className="font-label-caps text-xs text-primary font-bold uppercase tracking-wider">
+                        Next Atelier Live Masterclass
+                      </span>
+                    </div>
 
-                <h3 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface leading-tight mb-2">
-                  {workshops[0].title}
-                </h3>
+                    <h3 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface leading-tight mb-2">
+                      {workshops[0].title}
+                    </h3>
 
-                <p className="text-body-sm text-on-surface-variant mb-4">
-                  Guided directly by Elder Artisan {workshops[0].instructor}. Sourcing raw geru clay, sun-fermented wild rice wash, and traditional bamboo stylus preparation.
-                </p>
+                    <p className="text-body-sm text-on-surface-variant mb-4">
+                      Guided directly by {workshops[0].instructor}. {workshops[0].description}
+                    </p>
+                  </div>
 
-                {/* Prep-Kit Delivery Ribbon */}
-                <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-2.5 text-xs text-on-surface">
-                  <span className="material-symbols-outlined text-primary text-[20px]">local_shipping</span>
-                  <div>
-                    <span className="font-semibold block">Material Prep-Kit:</span>
-                    <span className="text-on-surface-variant text-[11px]">{workshops[0].prepKitStatus}</span>
+                  {/* Countdown Plinth */}
+                  <div className="flex flex-col items-center p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm self-stretch lg:self-auto min-w-[280px]">
+                    <span className="text-[10px] font-label-caps text-outline uppercase font-bold tracking-wider mb-2">
+                      Live Stream & Atelier Commences In
+                    </span>
+
+                    <div className="grid grid-cols-4 gap-2 text-center w-full mb-4">
+                      <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                        <span className="font-headline-sm text-xl font-bold text-primary block">
+                          {String(countdown.days).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] font-label-caps text-outline uppercase">Days</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                        <span className="font-headline-sm text-xl font-bold text-primary block">
+                          {String(countdown.hours).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] font-label-caps text-outline uppercase">Hours</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                        <span className="font-headline-sm text-xl font-bold text-primary block">
+                          {String(countdown.minutes).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] font-label-caps text-outline uppercase">Mins</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                        <span className="font-headline-sm text-xl font-bold text-primary block">
+                          {String(countdown.seconds).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] font-label-caps text-outline uppercase">Secs</span>
+                      </div>
+                    </div>
+
+                    <div className="w-full text-center">
+                      <button
+                        type="button"
+                        onClick={() => setBookingWorkshop(workshops[0])}
+                        className="w-full py-2.5 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">qr_code</span>
+                        <span>View Pass / Book Another Seat</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Countdown Plinth */}
-              <div className="flex flex-col items-center p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm self-stretch lg:self-auto min-w-[280px]">
-                <span className="text-[10px] font-label-caps text-outline uppercase font-bold tracking-wider mb-2">
-                  Live Stream & Atelier Commences In
-                </span>
+              {/* ALL UPCOMING GUILD WORKSHOPS */}
+              <div>
+                <h4 className="font-headline-sm text-lg font-bold text-on-surface mb-4">
+                  All Scheduled Immersion Guild Workshops
+                </h4>
 
-                <div className="grid grid-cols-4 gap-2 text-center w-full mb-4">
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="font-headline-sm text-xl font-bold text-primary block">
-                      {String(countdown.days).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-label-caps text-outline uppercase">Days</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="font-headline-sm text-xl font-bold text-primary block">
-                      {String(countdown.hours).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-label-caps text-outline uppercase">Hours</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="font-headline-sm text-xl font-bold text-primary block">
-                      {String(countdown.minutes).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-label-caps text-outline uppercase">Mins</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="font-headline-sm text-xl font-bold text-primary block">
-                      {String(countdown.seconds).padStart(2, '0')}
-                    </span>
-                    <span className="text-[9px] font-label-caps text-outline uppercase">Secs</span>
-                  </div>
-                </div>
-
-                <div className="w-full text-center">
-                  <button
-                    type="button"
-                    onClick={() => setBookingWorkshop(workshops[0])}
-                    className="w-full py-2.5 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-sm transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">qr_code</span>
-                    <span>View Pass / Book Another Seat</span>
-                  </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {workshops.map((ws) => (
+                    <WorkshopCard
+                      key={ws.id}
+                      ws={ws}
+                      onBook={(w) => setBookingWorkshop(w)}
+                    />
+                  ))}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* ALL UPCOMING GUILD WORKSHOPS */}
-          <div>
-            <h4 className="font-headline-sm text-lg font-bold text-on-surface mb-4">
-              All Scheduled Immersion Guild Workshops
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {workshops.map((ws) => (
-                <WorkshopCard
-                  key={ws.id}
-                  ws={ws}
-                  onBook={(w) => setBookingWorkshop(w)}
-                />
-              ))}
-            </div>
-          </div>
+            </>
+          )}
         </div>
       ) : (
         /* PERSONAL LEARNING VIEW */
         <div className="space-y-6">
-          {learningJourneys.map((lj) => (
+          {learningLoading && (
+            <div className="text-center py-12 text-on-surface-variant">
+              <p className="font-headline-sm text-base">Loading learning journeys…</p>
+            </div>
+          )}
+
+          {!learningLoading && learningError && (
+            <div className="text-center py-12 text-error">
+              <p className="font-headline-sm text-base">{learningError}</p>
+            </div>
+          )}
+
+          {!learningLoading && !learningError && learningJourneys.length === 0 && (
+            <div className="text-center py-12 text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/20">
+              <span className="material-symbols-outlined text-outline text-[40px] mb-2">menu_book</span>
+              <p className="font-headline-sm text-base">No published learning journeys yet</p>
+            </div>
+          )}
+
+          {!learningLoading && !learningError && learningJourneys.map((lj) => (
             <LearningJourneyCard key={lj.id} lj={lj} />
           ))}
         </div>
@@ -310,7 +370,7 @@ function LearningJourneyCard({ lj }) {
               </button>
               <div className="flex-1">
                 <span className="text-[11px] font-semibold block truncate">
-                  {isPlayingAudio ? "Playing Audio Archive: Rice Wash Chemistry" : "Audio Guide: Elder Devu Mashe"}
+                  {isPlayingAudio ? "Playing Audio Archive" : `Audio Guide: ${lj.instructor}`}
                 </span>
                 <div className="w-full bg-white/30 h-1 rounded-full overflow-hidden mt-1">
                   <div className={`bg-primary h-full rounded-full ${isPlayingAudio ? 'animate-pulse w-3/4' : 'w-1/3'}`}></div>

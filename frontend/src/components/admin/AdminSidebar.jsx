@@ -1,5 +1,6 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -8,13 +9,19 @@ import {
   Package,
   UserCheck,
   BarChart3,
-  Settings,
-  ShieldCheck,
+  LogOut,
   X,
 } from 'lucide-react';
 
 export default function AdminSidebar({ isOpen, onClose }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const isCurrent = (path) => {
     if (path === '/dashboard/admin') {
@@ -31,7 +38,6 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { to: '/dashboard/admin/products', label: 'Products', icon: Package },
     { to: '/dashboard/admin/users', label: 'Users', icon: UserCheck },
     { to: '/dashboard/admin/analytics', label: 'Analytics', icon: BarChart3 },
-    { to: '/dashboard/admin/settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -48,11 +54,24 @@ export default function AdminSidebar({ isOpen, onClose }) {
           {/* Brand Header from admin.html */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <img
-                alt="Tvarita Brandmark"
-                src="https://lh3.googleusercontent.com/aida/AEtjO1XV--XeXyWO-zdokp8Yhr9BQVGGexBV9BU8yOyYcO__PgMxJHy1eP6NQs0MFlCG85n3xNuNjNaPV3D8FlavcyfsEVZuYkLVEUSUyArXAMzDd3nXUexnoLkRypDrgi6v3y6PDVuZzL7XWS7XdgCjeGWOhKJ2V4mDnVBDkZQCbrEbwqAp0dfhipgHsxdMDF1X_Z_NBWX5dvE4JKqo7AiztssOxzpehh7SNm88gljn8AN2zZNNfwW6JTi3KQA"
-                style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
-              />
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'var(--color-on-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: '18px',
+                  flexShrink: 0,
+                }}
+              >
+                T
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span
                   style={{
@@ -119,44 +138,34 @@ export default function AdminSidebar({ isOpen, onClose }) {
               );
             })}
           </nav>
-        </div>
 
-        {/* Verified Folk Guild Plinth from admin.html */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            padding: '12px',
-            borderRadius: '0.75rem',
-            backgroundColor: 'var(--color-surface-container)',
-            marginTop: '1rem',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '10px',
-              letterSpacing: '0.1em',
-              color: 'var(--color-outline)',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-            }}
-          >
-            Verified Folk Guild
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span
+          {/* Sign Out Button */}
+          <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-surface-container-high)' }}>
+            <button
+              type="button"
+              onClick={handleLogout}
               style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '8px 12px',
+                borderRadius: '0.5rem',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--color-error, #ba1a1a)',
+                fontSize: '13px',
                 fontWeight: 600,
-                color: 'var(--color-on-surface)',
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+                transition: 'background 0.2s ease',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-error-container, #ffdad6)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              Dindori Gond Collective
-            </span>
-            <ShieldCheck size={18} color="var(--color-secondary)" />
+              <LogOut size={18} />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
       </aside>

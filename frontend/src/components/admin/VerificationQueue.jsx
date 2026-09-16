@@ -1,46 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  PlayCircle,
   CheckCircle2,
-  Clock,
+  XCircle,
   Search,
-  Filter,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
-import { ADMIN_VERIFICATION_QUEUE } from '../../data/adminMockData';
+import adminService from '../../services/adminService';
 
 export default function VerificationQueue() {
-  const [queue] = useState(ADMIN_VERIFICATION_QUEUE);
+  const [queue, setQueue] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [mintStatus, setMintStatus] = useState({}); // { [id]: 'idle' | 'minting' | 'minted' }
+  const [actionStatus, setActionStatus] = useState({}); // { [id]: 'approving' | 'rejecting' }
 
-  const handleApproveAndMint = (id, name) => {
-    setMintStatus((prev) => ({ ...prev, [id]: 'minting' }));
+  const fetchQueue = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminService.getArtists({ verificationStatus: 'pending' });
+      const data = res?.data || res;
+      setQueue(Array.isArray(data?.artists) ? data.artists : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load verification queue.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    setTimeout(() => {
-      setMintStatus((prev) => ({ ...prev, [id]: 'minted' }));
-      alert(`Cryptographic Provenance Token minted for ${name}! Attestation recorded in Sovereign Heritage Registry.`);
-    }, 950);
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
+
+  const handleApprove = async (id) => {
+    setActionStatus((prev) => ({ ...prev, [id]: 'approving' }));
+    try {
+      await adminService.approveArtist(id);
+      setQueue((prev) => prev.filter((item) => item._id !== id));
+    } catch (err) {
+      setError(err.message || 'Failed to approve artist.');
+    } finally {
+      setActionStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
-  const handleRequestSeal = (id, name) => {
-    alert(`Formal verification dispatch sent to the Odisha State Craft Guild Council for ${name}.`);
+  const handleReject = async (id) => {
+    const reason = window.prompt('Enter a reason for rejection (optional):', '') || '';
+    setActionStatus((prev) => ({ ...prev, [id]: 'rejecting' }));
+    try {
+      await adminService.rejectArtist(id, reason);
+      setQueue((prev) => prev.filter((item) => item._id !== id));
+    } catch (err) {
+      setError(err.message || 'Failed to reject artist.');
+    } finally {
+      setActionStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
-  const handlePlayAudio = (title) => {
-    alert(`Playing Oral Archive: "${title}". Validating native dialect terminology and Suvasini lineage recital.`);
-  };
-
-  const filteredQueue = queue.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.artForm.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.lineage.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredQueue = queue.filter((item) => {
+    const name = item.displayName || '';
+    const artForms = (item.artFormIds || []).map((af) => af?.name).filter(Boolean).join(' ');
+    const location = `${item.location?.city || ''} ${item.location?.state || ''}`;
+    const term = searchTerm.toLowerCase();
+    return (
+      name.toLowerCase().includes(term) ||
+      artForms.toLowerCase().includes(term) ||
+      location.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-      {/* Search & Filter Header from admin.html */}
+      {/* Search & Filter Header */}
       <div
         style={{
           display: 'flex',
@@ -56,10 +96,10 @@ export default function VerificationQueue() {
       >
         <div>
           <h2 className="font-headline-sm" style={{ fontSize: '20px', color: 'var(--color-on-surface)' }}>
-            Pending Verification &amp; Provenance Endorsement
+            Pending Artist Verification
           </h2>
           <p className="font-body-md" style={{ fontSize: '13px', color: 'var(--color-on-surface-variant)', marginTop: '2px' }}>
-            Review field interviews, oral lineage claims, local panchayat endorsements, and craft evidence prior to immutable ledger minting.
+            Review artist profiles awaiting verification and approve or reject onboarding.
           </p>
         </div>
 
@@ -77,7 +117,7 @@ export default function VerificationQueue() {
             <Search size={16} color="var(--color-outline)" />
             <input
               type="text"
-              placeholder="Search craft lineage or district..."
+              placeholder="Search by name, art form, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -95,15 +135,30 @@ export default function VerificationQueue() {
           <button
             type="button"
             className="btn-surface"
-            style={{ padding: '6px 14px', fontSize: '12px' }}
+            onClick={fetchQueue}
+            style={{ padding: '6px 14px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <Filter size={14} />
-            <span>All 6 States</span>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* Verification Queue Table from admin.html */}
+      {error && (
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--color-primary-container)',
+            color: 'var(--color-on-primary-container)',
+            fontSize: '13px',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Verification Queue Table */}
       <div
         style={{
           backgroundColor: 'var(--color-surface-container-lowest)',
@@ -125,187 +180,121 @@ export default function VerificationQueue() {
               }}
             >
               <tr>
-                <th style={{ padding: '1rem 1.5rem' }}>Artisan &amp; Lineage</th>
-                <th style={{ padding: '1rem 1.5rem' }}>Heritage Art Form</th>
-                <th style={{ padding: '1rem 1.5rem' }}>Oral History Archive</th>
-                <th style={{ padding: '1rem 1.5rem' }}>Cooperative Validation</th>
-                <th style={{ padding: '1rem 1.5rem' }}>GI Compliance</th>
-                <th style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>Governance Action</th>
+                <th style={{ padding: '1rem 1.5rem' }}>Artist</th>
+                <th style={{ padding: '1rem 1.5rem' }}>Art Forms</th>
+                <th style={{ padding: '1rem 1.5rem' }}>Location</th>
+                <th style={{ padding: '1rem 1.5rem' }}>Experience</th>
+                <th style={{ padding: '1rem 1.5rem' }}>Profile Completeness</th>
+                <th style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody style={{ fontSize: '13px', color: 'var(--color-on-surface)' }}>
-              {filteredQueue.map((item, index) => {
-                const status = mintStatus[item.id] || 'idle';
-                return (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderTop: index > 0 ? '1px solid var(--color-surface-container)' : 'none',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-container-low)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {/* Column 1: Artisan & Lineage */}
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img
-                          src={item.avatar}
-                          alt={item.name}
-                          style={{
-                            width: '44px',
-                            height: '44px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                          }}
-                        />
-                        <div>
-                          <div className="font-title-md" style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-on-surface)' }}>
-                            {item.name}
-                          </div>
-                          <div className="font-label-caps" style={{ color: 'var(--color-tertiary)', fontSize: '10px' }}>
-                            {item.lineage}
-                          </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-outline)' }}>
+                    <Loader2 size={18} className="animate-spin" style={{ marginRight: '8px' }} />
+                    Loading verification queue...
+                  </td>
+                </tr>
+              ) : filteredQueue.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-outline)' }}>
+                    No artists are currently pending verification.
+                  </td>
+                </tr>
+              ) : (
+                filteredQueue.map((item, index) => {
+                  const status = actionStatus[item._id];
+                  return (
+                    <tr
+                      key={item._id}
+                      style={{
+                        borderTop: index > 0 ? '1px solid var(--color-surface-container)' : 'none',
+                      }}
+                    >
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <div className="font-title-md" style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-on-surface)' }}>
+                          {item.displayName}
                         </div>
-                      </div>
-                    </td>
+                        <div className="font-label-caps" style={{ color: 'var(--color-tertiary)', fontSize: '10px' }}>
+                          {item.hasUserAccount ? (item.userId?.email || 'Linked account') : 'No linked account'}
+                        </div>
+                      </td>
 
-                    {/* Column 2: Heritage Art Form */}
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <span
-                        style={{
-                          padding: '4px 12px',
-                          borderRadius: '9999px',
-                          backgroundColor: 'var(--color-secondary-container)',
-                          color: 'var(--color-on-secondary-container)',
-                          fontFamily: 'var(--font-sans)',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {item.artForm}
-                      </span>
-                    </td>
-
-                    {/* Column 3: Oral History Archive */}
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => handlePlayAudio(item.audioTitle)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--color-primary)',
-                          fontFamily: 'var(--font-sans)',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <PlayCircle size={18} />
-                        <span>{item.audioTitle}</span>
-                      </button>
-                    </td>
-
-                    {/* Column 4: Cooperative Validation */}
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          color: item.cooperative.includes('Pending') ? 'var(--color-outline)' : 'var(--color-secondary)',
-                          fontSize: '13px',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {item.cooperative.includes('Pending') ? (
-                          <Clock size={16} />
+                      <td style={{ padding: '1rem 1.5rem', whiteSpace: 'nowrap' }}>
+                        {(item.artFormIds || []).length === 0 ? (
+                          <span style={{ color: 'var(--color-outline)', fontSize: '12px' }}>—</span>
                         ) : (
-                          <CheckCircle2 size={16} />
+                          (item.artFormIds || []).map((af) => (
+                            <span
+                              key={af._id}
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '9999px',
+                                backgroundColor: 'var(--color-secondary-container)',
+                                color: 'var(--color-on-secondary-container)',
+                                fontFamily: 'var(--font-sans)',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                display: 'inline-block',
+                                marginRight: '4px',
+                                marginBottom: '4px',
+                              }}
+                            >
+                              {af.name}
+                            </span>
+                          ))
                         )}
-                        <span>{item.cooperative}</span>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Column 5: GI Compliance */}
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <span
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: 'var(--color-surface-container-high)',
-                          color: 'var(--color-on-surface-variant)',
-                          fontFamily: 'var(--font-sans)',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {item.giCompliance}
-                      </span>
-                    </td>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        {[item.location?.city, item.location?.state].filter(Boolean).join(', ') || '—'}
+                      </td>
 
-                    {/* Column 6: Governance Action (Approve & Mint micro-interaction) */}
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      {item.actionType === 'approve' ? (
-                        status === 'minted' ? (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '6px 14px',
-                              borderRadius: '9999px',
-                              backgroundColor: 'var(--color-secondary)',
-                              color: 'var(--color-on-secondary)',
-                              fontFamily: 'var(--font-sans)',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                            }}
-                          >
-                            <CheckCircle2 size={16} />
-                            <span>Provenance Issued</span>
-                          </span>
-                        ) : status === 'minting' ? (
-                          <button
-                            type="button"
-                            disabled
-                            className="btn-primary"
-                            style={{ padding: '6px 16px', fontSize: '12px', opacity: 0.8, cursor: 'not-allowed' }}
-                          >
-                            <RefreshCw size={14} className="animate-spin-fast" />
-                            <span>Minting...</span>
-                          </button>
-                        ) : (
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        {item.experience ? `${item.experience} yrs` : '—'}
+                      </td>
+
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        {item.profileCompleteness !== undefined ? `${item.profileCompleteness}%` : '—'}
+                      </td>
+
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
                           <button
                             type="button"
                             className="btn-primary"
-                            onClick={() => handleApproveAndMint(item.id, item.name)}
-                            style={{ padding: '6px 16px', fontSize: '12px' }}
+                            disabled={!!status}
+                            onClick={() => handleApprove(item._id)}
+                            style={{ padding: '6px 14px', fontSize: '12px', opacity: status ? 0.7 : 1 }}
                           >
-                            Approve &amp; Mint
+                            {status === 'approving' ? (
+                              <RefreshCw size={14} className="animate-spin" />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
+                            <span>Approve</span>
                           </button>
-                        )
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn-surface"
-                          onClick={() => handleRequestSeal(item.id, item.name)}
-                          style={{ padding: '6px 16px', fontSize: '12px' }}
-                        >
-                          Request Guild Seal
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                          <button
+                            type="button"
+                            className="btn-surface"
+                            disabled={!!status}
+                            onClick={() => handleReject(item._id)}
+                            style={{ padding: '6px 14px', fontSize: '12px', opacity: status ? 0.7 : 1 }}
+                          >
+                            {status === 'rejecting' ? (
+                              <RefreshCw size={14} className="animate-spin" />
+                            ) : (
+                              <XCircle size={14} />
+                            )}
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

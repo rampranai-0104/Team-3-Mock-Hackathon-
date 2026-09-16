@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 
-export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantity, onRemoveItem }) {
+export default function CartDrawer({
+  isOpen,
+  onClose,
+  cartItems,
+  onUpdateQuantity,
+  onRemoveItem,
+  onCheckout,
+  isCheckingOut = false,
+  checkoutError = null,
+}) {
   if (!isOpen) return null;
 
   const totalAmount = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -49,29 +58,28 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
             )}
           </div>
 
-          {/* Footer & Payout summary */}
+          {/* Footer & Checkout summary */}
           {cartItems.length > 0 && (
             <div className="p-space-lg border-t border-outline-variant/30 bg-surface-container-low space-y-3">
-              {/* Direct-to-artisan assurance */}
-              <div className="p-2.5 rounded-lg bg-secondary-container/60 text-on-secondary-container text-xs flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">verified</span>
-                <span>100% Direct-to-Artisan Payout: All proceeds sent directly to verified tribal artist cooperatives.</span>
-              </div>
-
               <div className="flex justify-between items-baseline pt-1">
-                <span className="font-label-caps text-xs text-outline uppercase font-semibold">Total Royalties & Subtotal</span>
+                <span className="font-label-caps text-xs text-outline uppercase font-semibold">Subtotal</span>
                 <span className="font-headline-md text-xl font-bold text-on-surface">
                   ₹{totalAmount.toLocaleString('en-IN')}
                 </span>
               </div>
 
-              <button 
+              {checkoutError && (
+                <p className="text-xs text-error">{checkoutError}</p>
+              )}
+
+              <button
                 type="button"
-                onClick={() => alert("Proceeding to Direct Cultural Escrow Sandbox Checkout")}
-                className="w-full py-3 px-4 rounded-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                disabled={isCheckingOut}
+                onClick={() => onCheckout && onCheckout()}
+                className="w-full py-3 px-4 rounded-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                <span>Proceed to Escrow Checkout</span>
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                <span>{isCheckingOut ? 'Placing Order…' : 'Proceed to Checkout'}</span>
+                {!isCheckingOut && <span className="material-symbols-outlined text-[18px]">arrow_forward</span>}
               </button>
             </div>
           )}

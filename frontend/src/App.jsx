@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 
 /* Public Landing & Authentication Pages */
 import LandingPage from './pages/LandingPage';
@@ -28,12 +29,12 @@ import AdminEventsPage from './pages/admin/AdminEventsPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <AuthProvider>
+        <Routes>
         {/* 1. Public Landing Page */}
         <Route path="/" element={<LandingPage />} />
 
@@ -90,20 +91,12 @@ export default function App() {
 
           <Route path="analytics" element={<AdminAnalyticsPage />} />
           <Route path="analytics/impact" element={<AdminAnalyticsPage />} />
-
-          <Route path="settings" element={<AdminSettingsPage />} />
-
-          {/* Secondary aliases */}
-          <Route path="requests" element={<Navigate to="/dashboard/admin/artists" replace />} />
-          <Route path="bookings" element={<Navigate to="/dashboard/admin/events" replace />} />
-          <Route path="orders" element={<Navigate to="/dashboard/admin/products" replace />} />
-          <Route path="knowledge" element={<Navigate to="/dashboard/admin/art-forms" replace />} />
-          <Route path="notifications" element={<Navigate to="/dashboard/admin/settings" replace />} />
         </Route>
 
         {/* Catch all to landing page */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
-  );
+    </AuthProvider>
+  </BrowserRouter>
+);
 }

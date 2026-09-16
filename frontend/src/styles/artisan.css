@@ -4,6 +4,15 @@
    No external frameworks required.
    ========================================================================== */
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
 :root {
   /* Color Palette - Terracotta Primary */
   --color-primary: #9f3c16;

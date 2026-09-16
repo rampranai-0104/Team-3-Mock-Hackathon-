@@ -1,19 +1,72 @@
-import React, { useState } from 'react';
-import { QrCode, ZoomIn, CheckCircle2 } from 'lucide-react';
-import { ADMIN_MARKETPLACE_AUDIT } from '../../data/adminMockData';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle2, XCircle, RefreshCw, Loader2, Trash2 } from 'lucide-react';
+import adminService from '../../services/adminService';
 import ArtworkImage from '../common/ArtworkImage';
 
-export default function MarketplaceAudit() {
-  const [items] = useState(ADMIN_MARKETPLACE_AUDIT);
-  const [activeAlert, setActiveAlert] = useState(null);
+const MODERATION_LABEL = {
+  draft: 'Draft',
+  pending_review: 'Pending Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  archived: 'Archived',
+};
 
-  const handleAction = (id, title, actionName) => {
-    setActiveAlert(`Action "${actionName}" completed for "${title}". Provenance metadata updated.`);
+export default function MarketplaceAudit() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeAlert, setActiveAlert] = useState(null);
+  const [actionId, setActionId] = useState(null);
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminService.getProducts();
+      const data = res?.data || res;
+      setProducts(Array.isArray(data?.products) ? data.products : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load products.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const showAlert = (msg) => {
+    setActiveAlert(msg);
     setTimeout(() => setActiveAlert(null), 3500);
   };
 
-  const handleBatchNfc = () => {
-    alert('Generating batch of 50 cryptographically signed NFC tags for dispatch to regional guild workshops.');
+  const handleModerate = async (id, status, title) => {
+    setActionId(id);
+    try {
+      const res = await adminService.moderateProduct(id, status);
+      const updated = res?.data || res;
+      setProducts((prev) => prev.map((p) => (p._id === id ? { ...p, ...updated } : p)));
+      showAlert(`"${title}" marked as ${MODERATION_LABEL[status] || status}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update product moderation status.');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleDelete = async (id, title) => {
+    if (!window.confirm(`Remove "${title}" from the marketplace?`)) return;
+    setActionId(id);
+    try {
+      await adminService.deleteProduct(id);
+      await fetchProducts();
+      showAlert(`"${title}" removed or archived.`);
+    } catch (err) {
+      setError(err.message || 'Failed to delete product.');
+    } finally {
+      setActionId(null);
+    }
   };
 
   return (
@@ -22,21 +75,21 @@ export default function MarketplaceAudit() {
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
         <div>
           <h2 className="font-headline-sm" style={{ color: 'var(--color-on-surface)' }}>
-            Artwork Quality Review &amp; Seal Dispatch
+            Marketplace Product Moderation
           </h2>
           <p className="font-body-md" style={{ color: 'var(--color-on-surface-variant)' }}>
-            Reviewing physical authenticity, fair pricing indices, and non-exploitative consignment criteria.
+            Review, approve, or reject products submitted to the marketplace.
           </p>
         </div>
 
         <button
           type="button"
           className="btn-surface"
-          onClick={handleBatchNfc}
-          style={{ padding: '8px 16px', fontSize: '13px' }}
+          onClick={fetchProducts}
+          style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
-          <QrCode size={18} />
-          <span>Batch NFC Tag Generator</span>
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -58,120 +111,138 @@ export default function MarketplaceAudit() {
         </div>
       )}
 
-      {/* Bento Cards from admin.html */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {items.map((art) => (
-          <div
-            key={art.id}
-            style={{
-              backgroundColor: 'var(--color-surface-container-lowest)',
-              padding: '1rem',
-              borderRadius: '1rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ position: 'relative', height: '220px', borderRadius: '0.75rem', overflow: 'hidden' }}>
-                <ArtworkImage src={art.image} alt={art.title} style={{ width: '100%', height: '100%' }} />
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    padding: '4px 10px',
-                    borderRadius: '9999px',
-                    backgroundColor: 'rgba(251, 249, 243, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    color: 'var(--color-on-surface)',
-                  }}
-                >
-                  {art.badge}
-                </span>
-              </div>
+      {error && (
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: '0.75rem',
+            backgroundColor: 'var(--color-primary-container)',
+            color: 'var(--color-on-primary-container)',
+            fontSize: '13px',
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
-                <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
-                  {art.artForm}
-                </span>
-                <span className="font-title-md" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
-                  {art.price}
-                </span>
-              </div>
-
-              <h4 className="font-headline-sm" style={{ fontSize: '18px', color: 'var(--color-on-surface)' }}>
-                {art.title}
-              </h4>
-
-              <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)', lineHeight: '1.4' }}>
-                Artisan: <strong>{art.artist}</strong> • {art.specs}
-              </p>
-
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-outline)', padding: '2rem' }}>
+          <Loader2 size={18} className="animate-spin" />
+          Loading products...
+        </div>
+      ) : products.length === 0 ? (
+        <div style={{ color: 'var(--color-outline)', padding: '2rem', textAlign: 'center' }}>
+          No products found.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '1.5rem',
+          }}
+        >
+          {products.map((product) => {
+            const imageUrl = product.images?.[0]?.url || product.media?.[0]?.url || '';
+            const isBusy = actionId === product._id;
+            return (
               <div
+                key={product._id}
                 style={{
-                  padding: '8px 10px',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'var(--color-surface-container-low)',
+                  backgroundColor: 'var(--color-surface-container-lowest)',
+                  padding: '1rem',
+                  borderRadius: '1rem',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px',
-                  fontSize: '11px',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-tertiary)' }}>Fair Trade Compliance:</span>
-                  <span style={{ color: 'var(--color-secondary)', fontWeight: 700 }}>{art.compliance}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ position: 'relative', height: '220px', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                    <ArtworkImage src={imageUrl} alt={product.title} style={{ width: '100%', height: '100%' }} />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        padding: '4px 10px',
+                        borderRadius: '9999px',
+                        backgroundColor: 'rgba(251, 249, 243, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: 'var(--color-on-surface)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {MODERATION_LABEL[product.moderationStatus] || product.moderationStatus}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
+                    <span className="font-label-caps" style={{ color: 'var(--color-outline)' }}>
+                      {product.artFormId?.name || 'Unassigned'}
+                    </span>
+                    <span className="font-title-md" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
+                      {product.price?.toLocaleString?.() ?? product.price}
+                    </span>
+                  </div>
+
+                  <h4 className="font-headline-sm" style={{ fontSize: '18px', color: 'var(--color-on-surface)' }}>
+                    {product.title}
+                  </h4>
+
+                  <p className="font-body-sm" style={{ color: 'var(--color-on-surface-variant)', lineHeight: '1.4' }}>
+                    Artist: <strong>{product.artistId?.displayName || '—'}</strong> • Stock: {product.stock}
+                  </p>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-tertiary)' }}>Physical NFC Tag ID:</span>
-                  <span style={{ fontFamily: 'monospace', color: 'var(--color-on-surface)' }}>{art.nfcTag}</span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={isBusy || product.moderationStatus === 'approved'}
+                    onClick={() => handleModerate(product._id, 'approved', product.title)}
+                    style={{ flex: 1, padding: '10px', fontSize: '13px', minWidth: '100px' }}
+                  >
+                    <CheckCircle2 size={14} /> Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-surface"
+                    disabled={isBusy || product.moderationStatus === 'rejected'}
+                    onClick={() => handleModerate(product._id, 'rejected', product.title)}
+                    style={{ padding: '10px', fontSize: '13px' }}
+                  >
+                    <XCircle size={14} /> Reject
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => handleDelete(product._id, product.title)}
+                    style={{
+                      padding: '10px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-surface-container-high)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Delete / Archive"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '8px' }}>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => handleAction(art.id, art.title, art.primaryAction)}
-                style={{ flex: 1, padding: '10px', fontSize: '13px' }}
-              >
-                {art.primaryAction}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => alert(`Inspection zoom preview for "${art.title}" by ${art.artist}. Authentic natural pigment layers confirmed.`)}
-                style={{
-                  padding: '10px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--color-surface-container-high)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                title="Inspect Pigments"
-              >
-                <ZoomIn size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

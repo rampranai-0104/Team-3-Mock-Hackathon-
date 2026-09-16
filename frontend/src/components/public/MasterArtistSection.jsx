@@ -1,10 +1,57 @@
-import React, { useState } from 'react';
-import { Play, Pause, Heart, ShieldCheck, Check } from 'lucide-react';
-import { MASTER_ARTIST_SPOTLIGHT } from '../../data/publicMockData';
+import React, { useEffect, useState } from 'react';
+import { Play, Pause, Heart, Check } from 'lucide-react';
+import publicService from '../../services/publicService';
 
 export default function MasterArtistSection() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [artist, setArtist] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await publicService.getArtists();
+        const list = Array.isArray(res?.data) ? res.data : [];
+        // Spotlight the most experienced verified custodian
+        const spotlight = [...list].sort((a, b) => (b.experience || 0) - (a.experience || 0))[0] || null;
+        if (mounted) setArtist(spotlight);
+      } catch (err) {
+        if (mounted) setError(err.message || 'Unable to load master artist spotlight.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="section-padding bg-surface-container-high" id="master-artists">
+        <div className="container-max">
+          <p className="font-body-sm text-on-surface-variant">Loading master artist spotlight…</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || !artist) {
+    return (
+      <section className="section-padding bg-surface-container-high" id="master-artists">
+        <div className="container-max">
+          <p className="font-body-sm text-on-surface-variant">
+            {error || 'No verified master artists published yet — check back soon.'}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const location = [artist.location?.city, artist.location?.state].filter(Boolean).join(', ') || 'India';
+  const studioImage = artist.profileImage || artist.media?.[0]?.url;
+  const macroDetailImage = artist.media?.[1]?.url || artist.media?.[0]?.url || studioImage;
 
   return (
     <section className="section-padding bg-surface-container-high" id="master-artists">
@@ -20,18 +67,18 @@ export default function MasterArtistSection() {
           <div className="lg:col-span-6 space-y-5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant font-label-md">
               <span className="w-2 h-2 rounded-full bg-primary"></span>
-              <span>{MASTER_ARTIST_SPOTLIGHT.accolades}</span>
+              <span>Verified Master Custodian • {artist.artFormIds?.[0]?.name || 'Living Tradition'}</span>
             </div>
 
             <h2 className="font-headline-lg text-on-surface">
-              {MASTER_ARTIST_SPOTLIGHT.name}
+              {artist.displayName}
             </h2>
 
             <p className="font-body-lg text-on-surface-variant leading-relaxed">
-              {MASTER_ARTIST_SPOTLIGHT.bio}
+              {artist.bio || 'A hereditary custodian preserving ancestral techniques and passing them to the next generation of practitioners.'}
             </p>
 
-            {/* Interactive Audio Narrative Snippet Player */}
+            {/* Interactive Audio Narrative Snippet Player (illustrative, no backing audio asset in this data model) */}
             <div className="p-4 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-4">
               <button
                 type="button"
@@ -47,10 +94,7 @@ export default function MasterArtistSection() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between text-body-sm mb-1.5">
                   <span className="font-title-md text-on-surface truncate">
-                    {MASTER_ARTIST_SPOTLIGHT.audioTitle}
-                  </span>
-                  <span className="font-label-md text-outline font-mono">
-                    {MASTER_ARTIST_SPOTLIGHT.audioDuration}
+                    Field Recording: Oral Craft Narrative
                   </span>
                 </div>
 
@@ -75,19 +119,19 @@ export default function MasterArtistSection() {
               <div className="p-4 rounded-xl bg-surface-container">
                 <span className="font-label-caps text-outline block">Studio Location</span>
                 <span className="font-title-md text-on-surface mt-1 block">
-                  {MASTER_ARTIST_SPOTLIGHT.studioLocation}
+                  {location}
                 </span>
                 <span className="font-body-sm text-on-surface-variant">
-                  {MASTER_ARTIST_SPOTLIGHT.studioType}
+                  {artist.languages?.join(', ') || 'Guild Collective'}
                 </span>
               </div>
               <div className="p-4 rounded-xl bg-surface-container">
-                <span className="font-label-caps text-outline block">Next Masterclass</span>
+                <span className="font-label-caps text-outline block">Practice Experience</span>
                 <span className="font-title-md text-on-surface mt-1 block">
-                  {MASTER_ARTIST_SPOTLIGHT.nextMasterclassDate}
+                  {artist.experience || 0} Years
                 </span>
                 <span className="font-body-sm text-secondary font-semibold">
-                  {MASTER_ARTIST_SPOTLIGHT.nextMasterclassSeats}
+                  {artist.availability?.isAvailable === false ? 'Fully Booked' : 'Open for Engagements'}
                 </span>
               </div>
             </div>
@@ -119,33 +163,30 @@ export default function MasterArtistSection() {
           {/* Right: Dual Artwork & Studio Composition */}
           <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-12 gap-4">
             <div className="sm:col-span-7 master-artist-image rounded-2xl shadow-lg bg-surface-container">
-              <img
-                src={MASTER_ARTIST_SPOTLIGHT.studioImage}
-                alt="Smt. Baua Devi painting ceremonial mural in studio"
-                loading="lazy"
-              />
+              {studioImage && (
+                <img
+                  src={studioImage}
+                  alt={`${artist.displayName} in studio`}
+                  loading="lazy"
+                />
+              )}
             </div>
             <div className="sm:col-span-5 flex flex-col gap-4">
               <div className="master-artist-secondary-image rounded-2xl shadow-md bg-surface-container">
-                <img
-                  src={MASTER_ARTIST_SPOTLIGHT.macroDetailImage}
-                  alt="Archival macro detail of Madhubani Kachni linework"
-                  loading="lazy"
-                />
+                {macroDetailImage && (
+                  <img
+                    src={macroDetailImage}
+                    alt={`Archival detail from ${artist.displayName}'s work`}
+                    loading="lazy"
+                  />
+                )}
               </div>
               <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm flex-1 flex flex-col justify-between">
                 <div>
-                  <span className="font-label-caps text-[10px] text-outline uppercase block">
-                    Archival Verification
-                  </span>
-                  <h4 className="font-title-md text-on-surface mt-1">Direct Lineage Ledger</h4>
+                  <h4 className="font-title-md text-on-surface">{artist.displayName}</h4>
                   <p className="font-body-sm text-on-surface-variant mt-1.5 leading-relaxed">
-                    {MASTER_ARTIST_SPOTLIGHT.lineageLedgerNotice}
+                    {artist.bio || 'A verified master artisan on the Tvarita platform.'}
                   </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-secondary font-label-caps text-[10px] font-bold uppercase tracking-wider mt-3">
-                  <ShieldCheck className="w-4 h-4 text-secondary" />
-                  <span>Cooperative Certified</span>
                 </div>
               </div>
             </div>
