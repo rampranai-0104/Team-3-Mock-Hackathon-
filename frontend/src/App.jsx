@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+
+/* Artist Dashboard Imports (Preserved untouched) */
 import ArtisanLayout from './pages/ArtisanLayout';
 import ArtisanOverview from './pages/ArtisanOverview';
 import ArtisanProfile from './pages/ArtisanProfile';
@@ -9,6 +11,22 @@ import ArtisanEarnings from './pages/ArtisanEarnings';
 import ArtisanFollowers from './pages/ArtisanFollowers';
 import ArtisanProducts from './pages/ArtisanProducts';
 import ArtisanSettings from './pages/ArtisanSettings';
+
+/* Admin Executive Console Imports */
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminArtistsPage from './pages/admin/AdminArtistsPage';
+import AdminArtFormsPage from './pages/admin/AdminArtFormsPage';
+import AdminEventsPage from './pages/admin/AdminEventsPage';
+import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminRequestsPage from './pages/admin/AdminRequestsPage';
+import AdminBookingsPage from './pages/admin/AdminBookingsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminKnowledgePage from './pages/admin/AdminKnowledgePage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 /**
  * Public Landing Page Placeholder
@@ -77,25 +95,47 @@ function PublicLandingPlaceholder() {
         </span>
       </p>
 
-      <Link
-        to="/dashboard/artisan"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '14px 28px',
-          borderRadius: '9999px',
-          backgroundColor: '#9f3c16',
-          color: '#ffffff',
-          textDecoration: 'none',
-          fontSize: '16px',
-          fontWeight: 700,
-          boxShadow: '0 4px 14px rgba(159, 60, 22, 0.25)',
-          transition: 'all 0.2s',
-        }}
-      >
-        <span>Open Artist Dashboard →</span>
-      </Link>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Link
+          to="/dashboard/artisan"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '14px 28px',
+            borderRadius: '9999px',
+            backgroundColor: '#9f3c16',
+            color: '#ffffff',
+            textDecoration: 'none',
+            fontSize: '15px',
+            fontWeight: 700,
+            boxShadow: '0 4px 14px rgba(159, 60, 22, 0.25)',
+            transition: 'all 0.2s',
+          }}
+        >
+          <span>Open Artist Dashboard →</span>
+        </Link>
+
+        <Link
+          to="/dashboard/admin"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '14px 28px',
+            borderRadius: '9999px',
+            backgroundColor: '#406646',
+            color: '#ffffff',
+            textDecoration: 'none',
+            fontSize: '15px',
+            fontWeight: 700,
+            boxShadow: '0 4px 14px rgba(64, 102, 70, 0.25)',
+            transition: 'all 0.2s',
+          }}
+        >
+          <span>Open Executive Console →</span>
+        </Link>
+      </div>
     </div>
   );
 }
@@ -107,7 +147,7 @@ export default function App() {
         {/* Root is reserved for Future Public Landing Page without redirect */}
         <Route path="/" element={<PublicLandingPlaceholder />} />
 
-        {/* Artist Dashboard Routes */}
+        {/* Artist Dashboard Routes (Preserved untouched) */}
         <Route path="/dashboard/artisan" element={<ArtisanLayout />}>
           <Route index element={<ArtisanOverview />} />
           <Route path="profile" element={<ArtisanProfile />} />
@@ -121,6 +161,26 @@ export default function App() {
           <Route path="products/add" element={<ArtisanProducts />} />
           <Route path="products/manage" element={<ArtisanProducts />} />
           <Route path="settings" element={<ArtisanSettings />} />
+        </Route>
+
+        {/* /admin alias redirecting to /dashboard/admin */}
+        <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
+
+        {/* Admin Executive Console Routes */}
+        <Route path="/dashboard/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="artists" element={<AdminArtistsPage />} />
+          <Route path="art-forms" element={<AdminArtFormsPage />} />
+          <Route path="events" element={<AdminEventsPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+          <Route path="requests" element={<AdminRequestsPage />} />
+          <Route path="bookings" element={<AdminBookingsPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="knowledge" element={<AdminKnowledgePage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="analytics" element={<AdminAnalyticsPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
         {/* Catch all to landing page */}

@@ -1,0 +1,157 @@
+/* ==========================================================================
+   TVARITA EXECUTIVE ADMIN CONSOLE STYLES
+   Source of Truth: admin.html layout, typography, spacing, and palettes.
+   ========================================================================== */
+
+.admin-shell {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  position: relative;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Desktop Sidebar */
+.admin-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 256px;
+  background-color: var(--color-surface-container-low);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-md);
+  box-sizing: border-box;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+.admin-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .admin-sidebar-backdrop.active {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(27, 28, 24, 0.45);
+    backdrop-filter: blur(4px);
+    z-index: 45;
+  }
+}
+
+/* Header */
+.admin-header {
+  position: fixed;
+  top: 0;
+  left: 256px;
+  right: 0;
+  height: 64px;
+  background-color: rgba(251, 249, 243, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 1px 8px rgba(44, 42, 41, 0.04);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xl);
+  box-sizing: border-box;
+  transition: left 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .admin-header {
+    left: 0;
+    padding: 0 var(--space-md);
+  }
+}
+
+/* Main Content Area */
+.admin-main-wrapper {
+  padding-left: 256px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  transition: padding-left 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .admin-main-wrapper {
+    padding-left: 0;
+  }
+}
+
+.admin-main {
+  position: relative;
+  padding-top: 64px;
+  background-color: var(--color-surface);
+  min-height: 100vh;
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
+  padding-bottom: var(--space-xl);
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .admin-main {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    padding-bottom: var(--space-md);
+  }
+}
+
+/* Navigation Items */
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px 12px;
+  border-radius: 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--color-on-surface-variant);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.admin-nav-item:hover {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+}
+
+.admin-nav-item.active {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
+}
+
+/* Animated Spin for Minting */
+@keyframes spinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-fast {
+  animation: spinClockwise 0.8s linear infinite;
+}
