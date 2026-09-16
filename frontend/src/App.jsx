@@ -4,13 +4,16 @@ import Footer from './components/common/Footer';
 import CartDrawer from './components/common/CartDrawer';
 import ExploreArtForms from './components/public/ExploreArtForms';
 import ExploreArtists from './components/public/ExploreArtists';
+import UpcomingEvents from './components/public/UpcomingEvents';
+import MyActivity from './components/public/MyActivity';
 import { 
   publicUser, 
   artForms, 
   masterArtists, 
   upcomingWorkshops, 
   institutionData,
-  marketplaceProducts 
+  marketplaceProducts,
+  myArtworkOrders
 } from './data/mockData';
 
 export default function App() {
@@ -22,6 +25,11 @@ export default function App() {
   // Followed Artists state
   const [followedArtistIds, setFollowedArtistIds] = useState(
     masterArtists.filter(a => a.isFollowing).map(a => a.id)
+  );
+
+  // Bookings list state
+  const [bookingsList, setBookingsList] = useState(
+    upcomingWorkshops.filter(w => w.confirmed)
   );
 
   // Cart state
@@ -48,6 +56,10 @@ export default function App() {
     );
   };
 
+  const handleBookWorkshop = (booked) => {
+    setBookingsList(prev => [booked, ...prev]);
+  };
+
   const handleUpdateQuantity = (id, newQty) => {
     setCartItems(prev => prev.map(item => item.id === id ? { ...item, quantity: newQty } : item));
   };
@@ -55,6 +67,8 @@ export default function App() {
   const handleRemoveItem = (id) => {
     setCartItems(prev => prev.filter(item => item.id !== id));
   };
+
+  const followedArtists = masterArtists.filter(a => followedArtistIds.includes(a.id));
 
   return (
     <div className="min-h-screen flex flex-col bg-surface text-on-surface">
@@ -231,38 +245,44 @@ export default function App() {
                   followedArtistIds={followedArtistIds} 
                   onToggleFollow={handleToggleFollow} 
                 />
+              ) : publicTab === 2 ? (
+                /* SECTION 3: UPCOMING EVENTS (Workshops & Personal Learning) */
+                <UpcomingEvents 
+                  workshops={upcomingWorkshops}
+                  onBookWorkshop={handleBookWorkshop}
+                />
+              ) : publicTab === 3 ? (
+                /* SECTION 4: MY ACTIVITY (Followed, Bookings, Orders with NFC) */
+                <MyActivity
+                  followedArtists={followedArtists}
+                  onUnfollowArtist={handleToggleFollow}
+                  bookings={bookingsList}
+                  orders={myArtworkOrders}
+                />
               ) : (
-                /* SECTIONS 3, 4, 5 (Step 3 & Step 4 Previews) */
+                /* SECTION 5: MARKETPLACE (Coming in Step 4) */
                 <div className="py-8 text-center space-y-4">
                   <div className="inline-flex p-4 rounded-full bg-primary-fixed text-primary mb-2">
-                    <span className="material-symbols-outlined text-[32px]">
-                      {publicTab === 2 ? 'event' : publicTab === 3 ? 'verified_user' : 'storefront'}
-                    </span>
+                    <span className="material-symbols-outlined text-[32px]">storefront</span>
                   </div>
                   <h3 className="font-headline-sm text-2xl font-bold text-on-surface">
-                    {publicTab === 2 ? '3. Upcoming Events (Workshops & Personal Learning)' :
-                     publicTab === 3 ? '4. My Activity (Followed Artists, Bookings & Orders)' :
-                     '5. Marketplace / Products'}
+                    5. Living Marketplace / Products
                   </h3>
                   <p className="text-body-sm text-on-surface-variant max-w-md mx-auto">
-                    {publicTab === 2 
-                      ? 'Workshops with countdown timer, QR pass generation, and self-paced traditional art pedagogy modules scheduled for Step 3.'
-                      : publicTab === 3
-                      ? 'Followed artists overview, confirmed bookings, and artwork order tracking with the 5-stage NFC provenance audit stepper scheduled for Step 3.'
-                      : 'Authentic tribal artwork catalog with 100% direct-to-artisan royalty pledge and cart checkout scheduled for Step 4.'}
+                    Authentic handmade tribal artworks, direct-to-artisan royalty pledge breakdown, and integrated cart drawer checkout will be connected in Step 4!
                   </p>
                   <div className="flex justify-center gap-3 pt-2">
                     <button 
-                      onClick={() => setPublicTab(0)}
+                      onClick={() => setPublicTab(2)}
                       className="px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface"
                     >
-                      ← Back to 1. Explore Art Forms
+                      ← Back to 3. Upcoming Events
                     </button>
                     <button 
-                      onClick={() => setPublicTab(1)}
+                      onClick={() => setPublicTab(3)}
                       className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-semibold shadow-xs"
                     >
-                      View 2. Explore Artists →
+                      View 4. My Activity →
                     </button>
                   </div>
                 </div>
