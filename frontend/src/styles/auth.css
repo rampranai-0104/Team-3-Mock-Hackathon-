@@ -1,0 +1,220 @@
+@import './public.css';
+
+/* ==========================================================================
+   Tvarita Authentication & Placeholder Styling
+   Visual Identity: Editorial Terracotta & Cream Heritage
+   ========================================================================== */
+
+.auth-page-shell {
+  min-height: 100vh;
+  background-color: var(--color-surface, #fbf9f3);
+  color: var(--color-on-surface, #1b1c18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+}
+
+.auth-card-wrapper {
+  width: 100%;
+  max-width: 980px;
+  background-color: var(--color-surface-container-lowest, #ffffff);
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 36px rgba(27, 28, 24, 0.08);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--color-outline-variant, #dec0b7);
+}
+
+@media (max-width: 860px) {
+  .auth-card-wrapper {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+  .auth-visual-side {
+    display: none !important;
+  }
+}
+
+.auth-form-side {
+  padding: clamp(2rem, 4vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-visual-side {
+  background-color: var(--color-surface-container-low, #f5f3ed);
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid var(--color-surface-container-high, #eae8e2);
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1.25rem;
+}
+
+.auth-input-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface, #1b1c18);
+}
+
+.auth-text-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-outline-variant, #dec0b7);
+  background-color: var(--color-surface-container-lowest, #ffffff);
+  color: var(--color-on-surface, #1b1c18);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-text-input:focus {
+  border-color: var(--color-primary, #9f3c16);
+  box-shadow: 0 0 0 3px rgba(159, 60, 22, 0.12);
+}
+
+/* Quick Role Selector for Login */
+.auth-role-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 480px) {
+  .auth-role-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.auth-role-card {
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--color-surface-container-high, #eae8e2);
+  background-color: var(--color-surface-container-low, #f5f3ed);
+  color: var(--color-on-surface-variant, #57423b);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+}
+
+.auth-role-card:hover {
+  background-color: var(--color-surface-container, #f0eee8);
+}
+
+.auth-role-card.selected {
+  border-color: var(--color-primary, #9f3c16);
+  background-color: var(--color-primary-fixed, #ffdbcf);
+  color: var(--color-primary, #9f3c16);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(159, 60, 22, 0.15);
+}
+
+/* Account Type Selector for Register */
+.account-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 520px) {
+  .account-type-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.account-type-card {
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-surface-container-high, #eae8e2);
+  background-color: var(--color-surface-container-low, #f5f3ed);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+}
+
+.account-type-card:hover {
+  background-color: var(--color-surface-container, #f0eee8);
+}
+
+.account-type-card.selected {
+  border-color: var(--color-primary, #9f3c16);
+  background-color: var(--color-primary-fixed, #ffdbcf);
+  color: var(--color-on-primary-fixed-variant, #822801);
+}
+
+/* Submit Button */
+.auth-submit-btn {
+  width: 100%;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  background-color: var(--color-primary, #9f3c16);
+  color: var(--color-on-primary, #ffffff);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(159, 60, 22, 0.2);
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.auth-submit-btn:hover {
+  background-color: var(--color-primary-container, #bf542c);
+  transform: translateY(-1px);
+}
+
+/* Minimal Temporary Placeholder Pages */
+.placeholder-shell {
+  min-height: 100vh;
+  background-color: var(--color-surface, #fbf9f3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+}
+
+.placeholder-card {
+  max-width: 520px;
+  width: 100%;
+  background-color: var(--color-surface-container-lowest, #ffffff);
+  padding: 3rem 2.5rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 32px rgba(27, 28, 24, 0.08);
+  border: 1px solid var(--color-outline-variant, #dec0b7);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
