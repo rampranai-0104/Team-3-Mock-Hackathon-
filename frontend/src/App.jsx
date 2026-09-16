@@ -9,9 +9,11 @@ import MyActivity from './components/public/MyActivity';
 import Marketplace from './components/public/Marketplace';
 import InstExploreArtForms from './components/institution/InstExploreArtForms';
 import BookWorkshopsWizard from './components/institution/BookWorkshopsWizard';
+import RequestsTracker from './components/institution/RequestsTracker';
+import InstUpcomingEvents from './components/institution/InstUpcomingEvents';
+import ProductBuying from './components/institution/ProductBuying';
 import { 
   publicUser, 
-  artForms, 
   masterArtists, 
   upcomingWorkshops, 
   institutionData,
@@ -69,6 +71,7 @@ export default function App() {
 
   const handleInquirySubmitted = (newRequest) => {
     setRequestsList(prev => [newRequest, ...prev]);
+    setInstitutionTab(2); // Jump to Requests tab to see the new request!
   };
 
   const handleAddToCart = (product) => {
@@ -265,24 +268,21 @@ export default function App() {
           {/* ACTIVE TAB CONTENT DISPLAY */}
           <div className="bg-surface-container-lowest rounded-2xl p-space-lg lg:p-space-xl border border-outline-variant/30 shadow-sm">
             {activePortal === 'public' ? (
+              /* PUBLIC / CIVILIAN DASHBOARD (WhatsApp Image 1) */
               publicTab === 0 ? (
-                /* SECTION 1: EXPLORE ART FORMS */
                 <ExploreArtForms onNavigateToWorkshops={() => setPublicTab(2)} />
               ) : publicTab === 1 ? (
-                /* SECTION 2: EXPLORE ARTISTS */
                 <ExploreArtists 
                   artists={masterArtists} 
                   followedArtistIds={followedArtistIds} 
                   onToggleFollow={handleToggleFollow} 
                 />
               ) : publicTab === 2 ? (
-                /* SECTION 3: UPCOMING EVENTS */
                 <UpcomingEvents 
                   workshops={upcomingWorkshops}
                   onBookWorkshop={handleBookWorkshop}
                 />
               ) : publicTab === 3 ? (
-                /* SECTION 4: MY ACTIVITY */
                 <MyActivity
                   followedArtists={followedArtists}
                   onUnfollowArtist={handleToggleFollow}
@@ -290,13 +290,11 @@ export default function App() {
                   orders={myArtworkOrders}
                 />
               ) : (
-                /* SECTION 5: MARKETPLACE / PRODUCTS */
                 <Marketplace onAddToCart={handleAddToCart} />
               )
             ) : (
-              /* SCHOOL / CORPORATE DASHBOARD */
+              /* SCHOOL / CORPORATE DASHBOARD (WhatsApp Image 2) */
               institutionTab === 0 ? (
-                /* SECTION 1: EXPLORE ART FORMS */
                 <InstExploreArtForms 
                   onSelectForWorkshop={(formName) => {
                     setSelectedWizardForm(formName);
@@ -304,46 +302,16 @@ export default function App() {
                   }}
                 />
               ) : institutionTab === 1 ? (
-                /* SECTION 2: BOOK WORKSHOPS WIZARD */
                 <BookWorkshopsWizard 
                   initialForm={selectedWizardForm}
                   onInquirySubmitted={handleInquirySubmitted}
                 />
+              ) : institutionTab === 2 ? (
+                <RequestsTracker requests={requestsList} />
+              ) : institutionTab === 3 ? (
+                <InstUpcomingEvents />
               ) : (
-                /* SECTIONS 3, 4, 5 (Scheduled for Step 6) */
-                <div className="py-8 text-center space-y-4">
-                  <div className="inline-flex p-4 rounded-full bg-primary-fixed text-primary mb-2">
-                    <span className="material-symbols-outlined text-[32px]">
-                      {institutionTab === 2 ? 'assignment' : institutionTab === 3 ? 'calendar_month' : 'inventory_2'}
-                    </span>
-                  </div>
-                  <h3 className="font-headline-sm text-2xl font-bold text-on-surface">
-                    {institutionTab === 2 ? '3. Requests (Institutional Inquiries & Proposals Tracker)' :
-                     institutionTab === 3 ? '4. Upcoming Events (Active Campus Sessions & Masterclasses)' :
-                     '5. Product Buying (Bulk Gifting & Desk Souvenirs)'}
-                  </h3>
-                  <p className="text-body-sm text-on-surface-variant max-w-md mx-auto">
-                    {institutionTab === 2
-                      ? `Tracking ${requestsList.length} active institutional requests with status progression and CSR spend.`
-                      : institutionTab === 3
-                      ? 'Scheduled campus cultural week sessions, live video links, and downloadable curriculum kits.'
-                      : 'Authentic bulk corporate gifts catalog with dynamic tiered quotation calculator and instant RFQ requisition.'}
-                  </p>
-                  <div className="flex justify-center gap-3 pt-2">
-                    <button 
-                      onClick={() => setInstitutionTab(0)}
-                      className="px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface"
-                    >
-                      ← Back to 1. Explore Art Forms
-                    </button>
-                    <button 
-                      onClick={() => setInstitutionTab(1)}
-                      className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-semibold shadow-xs"
-                    >
-                      Launch 2. Booking Wizard →
-                    </button>
-                  </div>
-                </div>
+                <ProductBuying />
               )
             )}
           </div>
