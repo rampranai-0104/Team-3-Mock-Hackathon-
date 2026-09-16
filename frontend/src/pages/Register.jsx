@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TVARITA_BRANDMARK } from '../data/publicMockData';
@@ -139,7 +139,7 @@ export default function Register() {
               className="inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary font-label-md text-xs mb-3 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Sanctuary</span>
+              <span>Back to Home</span>
             </Link>
 
             <div className="flex items-center gap-3">
@@ -153,10 +153,10 @@ export default function Register() {
               </span>
             </div>
             <h1 className="font-headline-md text-2xl font-semibold text-on-surface mt-3">
-              Join the Living Archive
+              Create Your Account
             </h1>
             <p className="font-body-sm text-on-surface-variant mt-1">
-              Select your membership tier to begin ethical engagement.
+              Select your account type to get started.
             </p>
           </div>
 
@@ -203,7 +203,7 @@ export default function Register() {
                   {
                     id: 'artisan',
                     title: 'Artist',
-                    sub: 'Master Custodian',
+                    sub: 'Folk & Tribal Artist',
                     icon: Sparkles,
                   },
                   {
@@ -307,7 +307,7 @@ export default function Register() {
                   className="rounded border-outline-variant text-primary focus:ring-primary mt-0.5"
                 />
                 <span>
-                  I agree to the Tvarita Ethical Provenance Charter & Community Guidelines
+                  I agree to the Tvarita Terms of Service & Community Guidelines
                 </span>
               </label>
             </div>
@@ -321,7 +321,7 @@ export default function Register() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Registering with MongoDB...</span>
+                  <span>Creating account...</span>
                 </>
               ) : (
                 <>
@@ -344,20 +344,20 @@ export default function Register() {
         <div className="auth-visual-side">
           <div>
             <span className="font-label-caps text-primary text-[10px] tracking-widest uppercase block mb-2">
-              Ethical Heritage Charter
+              Cultural Platform
             </span>
             <h2 className="font-headline-md text-2xl font-bold text-on-surface leading-snug">
-              Direct Agency & Sovereign Royalties
+              Discover, Learn & Connect with Traditional Arts
             </h2>
             <p className="font-body-sm text-on-surface-variant mt-3 leading-relaxed">
-              When you join Tvarita, you are participating in a cooperative model that connects artisans directly with patrons and institutions.
+              When you join Tvarita, you can explore traditional art forms, connect with artists, book workshops, and access curated cultural knowledge.
             </p>
 
             <div className="space-y-3 mt-6">
               {[
-                'GI-certified tribal provenance certificates',
-                'Zero predatory middleman commission model',
-                'Unesco Intangible Cultural Heritage partner',
+                'Explore traditional Indian art forms and master artists',
+                'Book workshops, performances, and curated experiences',
+                'Discover handmade products and cultural knowledge archives',
               ].map((feat, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-on-surface">
                   <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
@@ -368,9 +368,9 @@ export default function Register() {
           </div>
 
           <div className="mt-8 p-4 rounded-xl bg-surface/80 border border-outline-variant/40">
-            <span className="font-label-caps text-[9px] text-outline uppercase block">Community Metric</span>
-            <span className="font-title-md font-bold text-on-surface">142 Indigenous Communities</span>
-            <span className="font-body-sm text-xs text-on-surface-variant block mt-0.5">Across 18 forest and rural climes</span>
+            <span className="font-label-caps text-[9px] text-outline uppercase block">Platform Ecosystem</span>
+            <span className="font-title-md font-bold text-on-surface">Integrated Arts Platform</span>
+            <span className="font-body-sm text-xs text-on-surface-variant block mt-0.5">Connecting patrons, institutions, and traditional artists</span>
           </div>
         </div>
       </div>
