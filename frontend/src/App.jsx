@@ -6,6 +6,7 @@ import ExploreArtForms from './components/public/ExploreArtForms';
 import ExploreArtists from './components/public/ExploreArtists';
 import UpcomingEvents from './components/public/UpcomingEvents';
 import MyActivity from './components/public/MyActivity';
+import Marketplace from './components/public/Marketplace';
 import { 
   publicUser, 
   artForms, 
@@ -58,6 +59,25 @@ export default function App() {
 
   const handleBookWorkshop = (booked) => {
     setBookingsList(prev => [booked, ...prev]);
+  };
+
+  const handleAddToCart = (product) => {
+    setCartItems(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      } else {
+        return [...prev, {
+          id: product.id,
+          title: product.title,
+          artist: product.artist,
+          tradition: product.tradition,
+          price: product.price,
+          quantity: 1,
+          image: product.image
+        }];
+      }
+    });
   };
 
   const handleUpdateQuantity = (id, newQty) => {
@@ -246,13 +266,13 @@ export default function App() {
                   onToggleFollow={handleToggleFollow} 
                 />
               ) : publicTab === 2 ? (
-                /* SECTION 3: UPCOMING EVENTS (Workshops & Personal Learning) */
+                /* SECTION 3: UPCOMING EVENTS */
                 <UpcomingEvents 
                   workshops={upcomingWorkshops}
                   onBookWorkshop={handleBookWorkshop}
                 />
               ) : publicTab === 3 ? (
-                /* SECTION 4: MY ACTIVITY (Followed, Bookings, Orders with NFC) */
+                /* SECTION 4: MY ACTIVITY */
                 <MyActivity
                   followedArtists={followedArtists}
                   onUnfollowArtist={handleToggleFollow}
@@ -260,32 +280,8 @@ export default function App() {
                   orders={myArtworkOrders}
                 />
               ) : (
-                /* SECTION 5: MARKETPLACE (Coming in Step 4) */
-                <div className="py-8 text-center space-y-4">
-                  <div className="inline-flex p-4 rounded-full bg-primary-fixed text-primary mb-2">
-                    <span className="material-symbols-outlined text-[32px]">storefront</span>
-                  </div>
-                  <h3 className="font-headline-sm text-2xl font-bold text-on-surface">
-                    5. Living Marketplace / Products
-                  </h3>
-                  <p className="text-body-sm text-on-surface-variant max-w-md mx-auto">
-                    Authentic handmade tribal artworks, direct-to-artisan royalty pledge breakdown, and integrated cart drawer checkout will be connected in Step 4!
-                  </p>
-                  <div className="flex justify-center gap-3 pt-2">
-                    <button 
-                      onClick={() => setPublicTab(2)}
-                      className="px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface"
-                    >
-                      ← Back to 3. Upcoming Events
-                    </button>
-                    <button 
-                      onClick={() => setPublicTab(3)}
-                      className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-semibold shadow-xs"
-                    >
-                      View 4. My Activity →
-                    </button>
-                  </div>
-                </div>
+                /* SECTION 5: MARKETPLACE / PRODUCTS */
+                <Marketplace onAddToCart={handleAddToCart} />
               )
             ) : (
               /* SCHOOL / CORPORATE DASHBOARD (Step 5 & Step 6) */
