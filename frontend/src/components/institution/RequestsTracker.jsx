@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function RequestsTracker({ requests, onCancelRequest }) {
+export default function RequestsTracker({ requests }) {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
 

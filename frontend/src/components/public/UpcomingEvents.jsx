@@ -5,7 +5,6 @@ import { learningJourneys } from '../../data/mockData';
 export default function UpcomingEvents({ workshops, onBookWorkshop }) {
   const [activeSubTab, setActiveSubTab] = useState('workshops'); // 'workshops' | 'learning'
   const [bookingWorkshop, setBookingWorkshop] = useState(null);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
   // Live countdown timer simulation
   const [countdown, setCountdown] = useState({
@@ -170,60 +169,11 @@ export default function UpcomingEvents({ workshops, onBookWorkshop }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {workshops.map((ws) => (
-                <div
+                <WorkshopCard
                   key={ws.id}
-                  className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="h-44 w-full relative overflow-hidden bg-surface-container">
-                      <img
-                        src={ws.image}
-                        alt={ws.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
-                        {ws.tradition}
-                      </span>
-                      <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-primary text-on-primary text-xs font-bold shadow-xs">
-                        {ws.price}
-                      </span>
-                    </div>
-
-                    <div className="p-5 space-y-2.5">
-                      <div className="flex items-center gap-2 text-xs text-outline">
-                        <span className="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
-                        <span>{ws.date} • {ws.time}</span>
-                      </div>
-
-                      <h4 className="font-headline-sm text-base font-bold text-on-surface">
-                        {ws.title}
-                      </h4>
-
-                      <p className="text-xs text-primary font-medium">
-                        Master: {ws.instructor} ({ws.instructorRole})
-                      </p>
-
-                      <p className="text-body-sm text-on-surface-variant line-clamp-2">
-                        {ws.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
-                    <span className="text-xs text-outline font-medium">
-                      {ws.location}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setBookingWorkshop(ws)}
-                      className="px-4 py-1.5 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-colors flex items-center gap-1"
-                    >
-                      <span>Book Pass</span>
-                      <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                    </button>
-                  </div>
-                </div>
+                  ws={ws}
+                  onBook={(w) => setBookingWorkshop(w)}
+                />
               ))}
             </div>
           </div>
@@ -232,99 +182,7 @@ export default function UpcomingEvents({ workshops, onBookWorkshop }) {
         /* PERSONAL LEARNING VIEW */
         <div className="space-y-6">
           {learningJourneys.map((lj) => (
-            <div
-              key={lj.id}
-              className="bg-surface-container-low rounded-2xl p-6 lg:p-8 border border-outline-variant/30 shadow-sm"
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                {/* Visualizer & Preview */}
-                <div className="lg:col-span-5 relative rounded-xl overflow-hidden shadow-sm h-60 bg-surface-container">
-                  <img
-                    src={lj.image}
-                    alt={lj.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex flex-col justify-between p-4 text-white">
-                    <span className="px-2.5 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-label-caps font-bold self-start">
-                      {lj.level}
-                    </span>
-
-                    {/* Audio/Video Simulation Bar */}
-                    <div className="flex items-center gap-3 bg-black/60 backdrop-blur-sm p-3 rounded-xl">
-                      <button
-                        type="button"
-                        onClick={() => setIsPlayingAudio(!isPlayingAudio)}
-                        className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:scale-105 transition-transform"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">
-                          {isPlayingAudio ? 'pause' : 'play_arrow'}
-                        </span>
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-[11px] font-semibold block truncate">
-                          {isPlayingAudio ? "Playing Audio Archive: Rice Wash Chemistry" : "Audio Guide: Elder Devu Mashe"}
-                        </span>
-                        <div className="w-full bg-white/30 h-1 rounded-full overflow-hidden mt-1">
-                          <div className={`bg-primary h-full rounded-full ${isPlayingAudio ? 'animate-pulse w-3/4' : 'w-1/3'}`}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Course Details & Progress */}
-                <div className="lg:col-span-7 space-y-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-semibold text-primary">{lj.tradition}</span>
-                      <span className="text-outline text-xs">•</span>
-                      <span className="text-xs text-outline">{lj.duration}</span>
-                    </div>
-                    <h3 className="font-headline-sm text-2xl font-bold text-on-surface">
-                      {lj.title}
-                    </h3>
-                    <p className="text-xs text-outline mt-0.5">Master Instructor: {lj.instructor}</p>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-on-surface">Immersion Course Progress</span>
-                      <span className="font-bold text-primary">{lj.progressPercentage}% Completed</span>
-                    </div>
-                    <div className="w-full bg-surface-container h-2.5 rounded-full overflow-hidden">
-                      <div
-                        className="bg-primary h-full rounded-full transition-all duration-700"
-                        style={{ width: `${lj.progressPercentage}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between text-[11px] text-outline pt-1">
-                      <span>{lj.completedModules} of {lj.totalModules} modules mastered</span>
-                      <span>Next: {lj.currentModule.split(':')[0]}</span>
-                    </div>
-                  </div>
-
-                  {/* Current Active Module */}
-                  <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/20 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <span className="material-symbols-outlined text-primary text-[20px]">auto_stories</span>
-                      <div>
-                        <span className="text-[10px] font-label-caps text-outline uppercase font-semibold">Active Lesson</span>
-                        <p className="text-xs font-bold text-on-surface">{lj.currentModule}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => alert(`Resuming ${lj.currentModule}`)}
-                      className="px-4 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
-                    >
-                      <span>Resume</span>
-                      <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LearningJourneyCard key={lj.id} lj={lj} />
           ))}
         </div>
       )}
@@ -339,6 +197,181 @@ export default function UpcomingEvents({ workshops, onBookWorkshop }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function WorkshopCard({ ws, onBook }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div>
+        {ws.image && !imageError && (
+          <div className="h-44 w-full relative overflow-hidden bg-surface-container">
+            <img
+              src={ws.image}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover"
+            />
+            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
+              {ws.tradition}
+            </span>
+            <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-primary text-on-primary text-xs font-bold shadow-xs">
+              {ws.price}
+            </span>
+          </div>
+        )}
+
+        <div className="p-5 space-y-2.5">
+          {(!ws.image || imageError) && (
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface text-[10px] font-label-caps font-bold">
+                {ws.tradition}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-primary text-on-primary text-xs font-bold shadow-xs">
+                {ws.price}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-xs text-outline">
+            <span className="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
+            <span>{ws.date} • {ws.time}</span>
+          </div>
+
+          <h4 className="font-headline-sm text-base font-bold text-on-surface">
+            {ws.title}
+          </h4>
+
+          <p className="text-xs text-primary font-medium">
+            Master: {ws.instructor} ({ws.instructorRole})
+          </p>
+
+          <p className="text-body-sm text-on-surface-variant line-clamp-2">
+            {ws.description}
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
+        <span className="text-xs text-outline font-medium">
+          {ws.location}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onBook(ws)}
+          className="px-4 py-1.5 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-colors flex items-center gap-1"
+        >
+          <span>Book Pass</span>
+          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LearningJourneyCard({ lj }) {
+  const [imageError, setImageError] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  return (
+    <div className="bg-surface-container-low rounded-2xl p-6 lg:p-8 border border-outline-variant/30 shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        {/* Visualizer & Preview */}
+        <div className="lg:col-span-5 relative rounded-xl overflow-hidden shadow-sm h-60 bg-surface-container">
+          {lj.image && !imageError && (
+            <img
+              src={lj.image}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/40 flex flex-col justify-between p-4 text-white">
+            <span className="px-2.5 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-label-caps font-bold self-start">
+              {lj.level}
+            </span>
+
+            {/* Audio/Video Simulation Bar */}
+            <div className="flex items-center gap-3 bg-black/60 backdrop-blur-sm p-3 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setIsPlayingAudio(!isPlayingAudio)}
+                className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center hover:scale-105 transition-transform"
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {isPlayingAudio ? 'pause' : 'play_arrow'}
+                </span>
+              </button>
+              <div className="flex-1">
+                <span className="text-[11px] font-semibold block truncate">
+                  {isPlayingAudio ? "Playing Audio Archive: Rice Wash Chemistry" : "Audio Guide: Elder Devu Mashe"}
+                </span>
+                <div className="w-full bg-white/30 h-1 rounded-full overflow-hidden mt-1">
+                  <div className={`bg-primary h-full rounded-full ${isPlayingAudio ? 'animate-pulse w-3/4' : 'w-1/3'}`}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Course Details & Progress */}
+        <div className="lg:col-span-7 space-y-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold text-primary">{lj.tradition}</span>
+              <span className="text-outline text-xs">•</span>
+              <span className="text-xs text-outline">{lj.duration}</span>
+            </div>
+            <h3 className="font-headline-sm text-2xl font-bold text-on-surface">
+              {lj.title}
+            </h3>
+            <p className="text-xs text-outline mt-0.5">Master Instructor: {lj.instructor}</p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-on-surface">Immersion Course Progress</span>
+              <span className="font-bold text-primary">{lj.progressPercentage}% Completed</span>
+            </div>
+            <div className="w-full bg-surface-container h-2.5 rounded-full overflow-hidden">
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-700"
+                style={{ width: `${lj.progressPercentage}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-[11px] text-outline pt-1">
+              <span>{lj.completedModules} of {lj.totalModules} modules mastered</span>
+              <span>Next: {lj.currentModule.split(':')[0]}</span>
+            </div>
+          </div>
+
+          {/* Current Active Module */}
+          <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/20 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-primary text-[20px]">auto_stories</span>
+              <div>
+                <span className="text-[10px] font-label-caps text-outline uppercase font-semibold">Active Lesson</span>
+                <p className="text-xs font-bold text-on-surface">{lj.currentModule}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => alert(`Resuming ${lj.currentModule}`)}
+              className="px-4 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
+            >
+              <span>Resume</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

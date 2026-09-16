@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function ArtistBioModal({ artist, onClose, isFollowing, onToggleFollow }) {
+  const [imgError, setImgError] = useState(false);
   if (!artist) return null;
 
   return (
@@ -8,11 +9,18 @@ export default function ArtistBioModal({ artist, onClose, isFollowing, onToggleF
       <div className="relative w-full max-w-xl bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header with image */}
         <div className="p-6 bg-surface-container-low border-b border-outline-variant/30 flex items-start gap-4">
-          <img 
-            src={artist.avatar} 
-            alt={artist.name}
-            className="w-20 h-20 rounded-2xl object-cover ring-2 ring-primary/30 flex-shrink-0 shadow-sm"
-          />
+          {!imgError && artist.avatar ? (
+            <img 
+              src={artist.avatar} 
+              alt=""
+              onError={() => setImgError(true)}
+              className="w-20 h-20 rounded-2xl object-cover ring-2 ring-primary/30 flex-shrink-0 shadow-sm"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-2xl font-bold flex-shrink-0 ring-2 ring-primary/30 shadow-sm">
+              {artist.name ? artist.name.charAt(0) : 'A'}
+            </div>
+          )}
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">

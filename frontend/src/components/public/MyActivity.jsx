@@ -8,7 +8,6 @@ export default function MyActivity({
   orders = myArtworkOrders 
 }) {
   const [activeActivityTab, setActiveActivityTab] = useState('followed'); // 'followed' | 'bookings' | 'orders'
-  const [activeQrPass, setActiveQrPass] = useState(null);
 
   return (
     <div className="space-y-6">
@@ -81,58 +80,11 @@ export default function MyActivity({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {followedArtists.map((artist) => (
-                <div
+                <FollowedArtistCard
                   key={artist.id}
-                  className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <img
-                        src={artist.avatar}
-                        alt={artist.name}
-                        className="w-14 h-14 rounded-2xl object-cover ring-2 ring-primary/30 flex-shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold truncate inline-block">
-                          {artist.tradition}
-                        </span>
-                        <h4 className="font-headline-sm text-base font-bold text-on-surface truncate mt-0.5">
-                          {artist.name}
-                        </h4>
-                        <p className="text-[11px] text-outline truncate">{artist.region}</p>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-surface-container-low text-xs space-y-1 mb-3">
-                      <div className="flex items-center justify-between text-on-surface-variant">
-                        <span>Current Status:</span>
-                        <span className="font-semibold text-primary">{artist.status}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-outline text-[11px]">
-                        <span>Clan Lineage:</span>
-                        <span>{artist.clan}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/20">
-                    <button
-                      type="button"
-                      onClick={() => alert(`Commission inquiry dialogue opened with ${artist.name}'s cooperative coordinator.`)}
-                      className="flex-1 py-1.5 px-3 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors"
-                    >
-                      Inquire / Commission
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onUnfollowArtist(artist.id)}
-                      className="py-1.5 px-3 rounded-full text-outline hover:text-error hover:bg-error/10 text-xs font-medium transition-colors"
-                      title="Unfollow"
-                    >
-                      Unfollow
-                    </button>
-                  </div>
-                </div>
+                  artist={artist}
+                  onUnfollowArtist={onUnfollowArtist}
+                />
               ))}
             </div>
           )}
@@ -241,24 +193,7 @@ export default function MyActivity({
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Artwork Passe-Partout Mat Plinth */}
-                <div className="lg:col-span-5 bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/30 shadow-sm text-center">
-                  <div className="p-3 bg-surface-container-high/40 rounded-xl border border-outline-variant/30 shadow-inner">
-                    <img
-                      src={order.image}
-                      alt={order.title}
-                      className="w-full h-64 object-cover rounded-lg shadow-md"
-                    />
-                  </div>
-                  <h4 className="font-headline-sm text-base font-bold text-on-surface mt-3">
-                    {order.title}
-                  </h4>
-                  <p className="text-xs text-outline mt-0.5">{order.dimensions}</p>
-
-                  <div className="mt-3 pt-3 border-t border-outline-variant/20 flex items-center justify-between text-xs">
-                    <span className="text-outline">Paid: <strong className="text-on-surface">{order.amount}</strong></span>
-                    <span className="text-secondary font-semibold">100% Escrow Disbursed</span>
-                  </div>
-                </div>
+                <OrderArtworkPlinth order={order} />
 
                 {/* 5-Stage Vertical NFC Provenance Audit Tracker */}
                 <div className="lg:col-span-7 space-y-4">
@@ -340,6 +275,102 @@ export default function MyActivity({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function FollowedArtistCard({ artist, onUnfollowArtist }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          {artist.avatar && !imageError ? (
+            <img
+              src={artist.avatar}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-14 h-14 rounded-2xl object-cover ring-2 ring-primary/30 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg flex-shrink-0 ring-2 ring-primary/30">
+              {artist.name ? artist.name[0] : 'A'}
+            </div>
+          )}
+          <div className="min-w-0">
+            <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold truncate inline-block">
+              {artist.tradition}
+            </span>
+            <h4 className="font-headline-sm text-base font-bold text-on-surface truncate mt-0.5">
+              {artist.name}
+            </h4>
+            <p className="text-[11px] text-outline truncate">{artist.region}</p>
+          </div>
+        </div>
+
+        <div className="p-2.5 rounded-xl bg-surface-container-low text-xs space-y-1 mb-3">
+          <div className="flex items-center justify-between text-on-surface-variant">
+            <span>Current Status:</span>
+            <span className="font-semibold text-primary">{artist.status}</span>
+          </div>
+          <div className="flex items-center justify-between text-outline text-[11px]">
+            <span>Clan Lineage:</span>
+            <span>{artist.clan}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/20">
+        <button
+          type="button"
+          onClick={() => alert(`Commission inquiry dialogue opened with ${artist.name}'s cooperative coordinator.`)}
+          className="flex-1 py-1.5 px-3 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors"
+        >
+          Inquire / Commission
+        </button>
+        <button
+          type="button"
+          onClick={() => onUnfollowArtist(artist.id)}
+          className="py-1.5 px-3 rounded-full text-outline hover:text-error hover:bg-error/10 text-xs font-medium transition-colors"
+          title="Unfollow"
+        >
+          Unfollow
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OrderArtworkPlinth({ order }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div className="lg:col-span-5 bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/30 shadow-sm text-center">
+      <div className="p-3 bg-surface-container-high/40 rounded-xl border border-outline-variant/30 shadow-inner">
+        {order.image && !imageError ? (
+          <img
+            src={order.image}
+            alt=""
+            onError={() => setImageError(true)}
+            className="w-full h-64 object-cover rounded-lg shadow-md"
+          />
+        ) : (
+          <div className="w-full h-64 rounded-lg bg-surface-container flex flex-col items-center justify-center text-outline gap-2">
+            <span className="material-symbols-outlined text-[36px]">palette</span>
+            <span className="text-xs font-medium">Acquired Heritage Piece</span>
+          </div>
+        )}
+      </div>
+      <h4 className="font-headline-sm text-base font-bold text-on-surface mt-3">
+        {order.title}
+      </h4>
+      <p className="text-xs text-outline mt-0.5">{order.dimensions}</p>
+
+      <div className="mt-3 pt-3 border-t border-outline-variant/20 flex items-center justify-between text-xs">
+        <span className="text-outline">Paid: <strong className="text-on-surface">{order.amount}</strong></span>
+        <span className="text-secondary font-semibold">100% Escrow Disbursed</span>
+      </div>
     </div>
   );
 }

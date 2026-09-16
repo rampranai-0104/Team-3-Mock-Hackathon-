@@ -90,13 +90,13 @@
 }
 
 .landing-main {
-  padding-top: var(--header-height, 104px);
+  padding-top: var(--header-height, 72px);
   width: 100%;
 }
 
 @media (max-width: 640px) {
   :root {
-    --header-height: 112px;
+    --header-height: 72px;
   }
 }
 

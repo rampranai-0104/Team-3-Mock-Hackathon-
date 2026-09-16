@@ -30,13 +30,13 @@ export default function ExploreArtForms({ onNavigateToWorkshops }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-outline-variant/30">
         <div>
           <span className="font-label-caps text-xs text-primary font-bold uppercase tracking-widest block mb-1">
-            Section 1 • Public Discovery
+            SECTION 1 • CULTURAL DISCOVERY
           </span>
           <h2 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface">
-            Explore Living Art Traditions
+            Discover Living Art Traditions
           </h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Explore certified tribal and folk genres safeguarded directly by elder master practitioners.
+            Explore India's living folk and indigenous art traditions, their stories, techniques, and communities.
           </p>
         </div>
 
@@ -76,85 +76,11 @@ export default function ExploreArtForms({ onNavigateToWorkshops }) {
       {/* Grid of Tradition Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredArtForms.map((tradition) => (
-          <div
+          <TraditionCard
             key={tradition.id}
-            className="group bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-          >
-            <div>
-              {/* Card Image */}
-              <div className="h-48 w-full relative overflow-hidden bg-surface-container">
-                <img
-                  src={tradition.image}
-                  alt={tradition.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                
-                {tradition.giCertified && (
-                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-surface-container-lowest/95 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold shadow-xs">
-                    GI TAG AUTHENTIC
-                  </span>
-                )}
-
-                <span className="absolute bottom-3 left-3 text-xs text-white/90 font-medium">
-                  {tradition.region}
-                </span>
-              </div>
-
-              {/* Card Content */}
-              <div className="p-5 space-y-3">
-                <div>
-                  <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
-                    {tradition.category}
-                  </span>
-                  <h3 className="font-headline-sm text-xl font-bold text-on-surface group-hover:text-primary transition-colors">
-                    {tradition.name}
-                  </h3>
-                  <p className="text-xs text-primary font-medium italic mt-0.5">
-                    "{tradition.tagline}"
-                  </p>
-                </div>
-
-                <p className="text-body-sm text-on-surface-variant line-clamp-2">
-                  {tradition.description}
-                </p>
-
-                {/* Motifs preview */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {tradition.motifs.slice(0, 3).map((motif, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 rounded-md bg-surface-container-low text-[11px] text-on-surface-variant border border-outline-variant/20"
-                    >
-                      {motif}
-                    </span>
-                  ))}
-                  {tradition.motifs.length > 3 && (
-                    <span className="px-1.5 py-0.5 text-[11px] text-outline">
-                      +{tradition.motifs.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Card Action Footer */}
-            <div className="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[9px] font-label-caps text-outline uppercase font-semibold">Lead Practitioner</span>
-                <span className="text-xs font-bold text-on-surface">{tradition.leadArtisan}</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setActiveModalTradition(tradition)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container text-on-surface hover:bg-primary hover:text-on-primary transition-all text-xs font-semibold shadow-xs"
-              >
-                <span>Details</span>
-                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </button>
-            </div>
-          </div>
+            tradition={tradition}
+            onSelectDetails={(trad) => setActiveModalTradition(trad)}
+          />
         ))}
       </div>
 
@@ -181,6 +107,110 @@ export default function ExploreArtForms({ onNavigateToWorkshops }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function TraditionCard({ tradition, onSelectDetails }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className="group bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div>
+        {/* Card Image: completely omitted if image fails or is unavailable */}
+        {tradition.image && !imageError && (
+          <div className="h-48 w-full relative overflow-hidden bg-surface-container">
+            <img
+              src={tradition.image}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+            
+            {tradition.giCertified && (
+              <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-surface-container-lowest/95 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold shadow-xs">
+                GI TAG AUTHENTIC
+              </span>
+            )}
+
+            <span className="absolute bottom-3 left-3 text-xs text-white/90 font-medium">
+              {tradition.region}
+            </span>
+          </div>
+        )}
+
+        {/* Card Content */}
+        <div className="p-5 space-y-3">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
+                {tradition.category}
+              </span>
+              {(!tradition.image || imageError) && (
+                <span className="text-xs text-on-surface-variant font-medium">
+                  {tradition.region}
+                </span>
+              )}
+            </div>
+
+            {(!tradition.image || imageError) && tradition.giCertified && (
+              <div className="mb-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">
+                  GI TAG AUTHENTIC
+                </span>
+              </div>
+            )}
+
+            <h3 className="font-headline-sm text-xl font-bold text-on-surface group-hover:text-primary transition-colors">
+              {tradition.name}
+            </h3>
+            <p className="text-xs text-primary font-medium italic mt-0.5">
+              "{tradition.tagline}"
+            </p>
+          </div>
+
+          <p className="text-body-sm text-on-surface-variant line-clamp-2">
+            {tradition.description}
+          </p>
+
+          {/* Motifs preview */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {tradition.motifs.slice(0, 3).map((motif, i) => (
+              <span
+                key={i}
+                className="px-2 py-0.5 rounded-md bg-surface-container-low text-[11px] text-on-surface-variant border border-outline-variant/20"
+              >
+                {motif}
+              </span>
+            ))}
+            {tradition.motifs.length > 3 && (
+              <span className="px-1.5 py-0.5 text-[11px] text-outline">
+                +{tradition.motifs.length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Card Action Footer */}
+      <div className="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-label-caps text-outline uppercase font-semibold">Lead Practitioner</span>
+          <span className="text-xs font-bold text-on-surface">{tradition.leadArtisan}</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onSelectDetails(tradition)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container text-on-surface hover:bg-primary hover:text-on-primary transition-all text-xs font-semibold shadow-xs"
+        >
+          <span>Details</span>
+          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+        </button>
+      </div>
     </div>
   );
 }

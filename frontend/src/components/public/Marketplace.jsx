@@ -87,82 +87,12 @@ export default function Marketplace({ onAddToCart }) {
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filteredProducts.map((product) => (
-          <div
+          <ProductCard
             key={product.id}
-            className="group bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-          >
-            <div>
-              {/* Product Image with Mat effect */}
-              <div className="h-56 w-full relative overflow-hidden bg-surface-container p-3 flex items-center justify-center">
-                <img
-                  src={product.image}
-                  alt={product.title}
-                  className="w-full h-full object-cover rounded-xl shadow-xs group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
-                  GI CERTIFIED
-                </span>
-                <span className="absolute bottom-4 left-4 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px]">
-                  {product.dimensions}
-                </span>
-              </div>
-
-              {/* Product Info */}
-              <div className="p-4 space-y-2">
-                <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
-                  {product.tradition}
-                </span>
-
-                <h3 className="font-headline-sm text-base font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1">
-                  {product.title}
-                </h3>
-
-                <p className="text-xs text-primary font-medium">
-                  By {product.artist}
-                </p>
-
-                <p className="text-[11px] text-on-surface-variant line-clamp-1">
-                  {product.medium}
-                </p>
-
-                {/* Direct-to-artisan assurance badge */}
-                <div className="p-2 rounded-lg bg-secondary-container/40 text-[10px] text-on-secondary-container font-medium flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px]">verified</span>
-                  <span className="truncate">100% Direct Escrow to Artisan</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Price and Cart Button */}
-            <div className="p-4 border-t border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-label-caps text-outline uppercase block">Direct Price</span>
-                <span className="font-headline-sm text-lg font-bold text-on-surface">
-                  {product.formattedPrice}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedProduct(product)}
-                  className="p-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors"
-                  title="View Details"
-                >
-                  <span className="material-symbols-outlined text-[16px]">visibility</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleAddToCartWithToast(product)}
-                  className="px-3.5 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-all flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[15px]">local_mall</span>
-                  <span>Add</span>
-                </button>
-              </div>
-            </div>
-          </div>
+            product={product}
+            onSelectProduct={(p) => setSelectedProduct(p)}
+            onAddToCart={handleAddToCartWithToast}
+          />
         ))}
       </div>
 
@@ -216,6 +146,98 @@ export default function Marketplace({ onAddToCart }) {
           onAddToCart={handleAddToCartWithToast}
         />
       )}
+    </div>
+  );
+}
+
+function ProductCard({ product, onSelectProduct, onAddToCart }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className="group bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div>
+        {/* Product Image: completely omitted if fails or unavailable */}
+        {product.image && !imageError && (
+          <div className="h-56 w-full relative overflow-hidden bg-surface-container p-3 flex items-center justify-center">
+            <img
+              src={product.image}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover rounded-xl shadow-xs group-hover:scale-105 transition-transform duration-500"
+            />
+            <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
+              GI CERTIFIED
+            </span>
+            <span className="absolute bottom-4 left-4 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px]">
+              {product.dimensions}
+            </span>
+          </div>
+        )}
+
+        {/* Product Info */}
+        <div className="p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
+              {product.tradition}
+            </span>
+            {(!product.image || imageError) && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-surface-container text-on-surface font-medium">
+                {product.dimensions}
+              </span>
+            )}
+          </div>
+
+          <h3 className="font-headline-sm text-base font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1">
+            {product.title}
+          </h3>
+
+          <p className="text-xs text-primary font-medium">
+            By {product.artist}
+          </p>
+
+          <p className="text-[11px] text-on-surface-variant line-clamp-1">
+            {product.medium}
+          </p>
+
+          {/* Direct-to-artisan assurance badge */}
+          <div className="p-2 rounded-lg bg-secondary-container/40 text-[10px] text-on-secondary-container font-medium flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[14px]">verified</span>
+            <span className="truncate">100% Direct Escrow to Artisan</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Price and Cart Button */}
+      <div className="p-4 border-t border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-label-caps text-outline uppercase block">Direct Price</span>
+          <span className="font-headline-sm text-lg font-bold text-on-surface">
+            {product.formattedPrice}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onSelectProduct(product)}
+            className="p-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors"
+            title="View Details"
+          >
+            <span className="material-symbols-outlined text-[16px]">visibility</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onAddToCart(product)}
+            className="px-3.5 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-all flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-[15px]">local_mall</span>
+            <span>Add</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

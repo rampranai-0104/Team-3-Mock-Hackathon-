@@ -1,152 +1,19 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { TVARITA_BRANDMARK } from '../../data/publicMockData';
-import { Search, Bookmark, ShoppingBag, Bell, Menu, X, ChevronDown, LogIn, UserPlus } from 'lucide-react';
+import { Search, Bookmark, ShoppingBag, Bell, Menu, X, LogIn, UserPlus } from 'lucide-react';
 
 export default function PublicHeader({ cartCount = 3, onOpenCart }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('Public Enthusiast');
-  const navigate = useNavigate();
-
-  const handleRoleSelect = (role, route) => {
-    setSelectedRole(role);
-    setRoleDropdownOpen(false);
-    navigate(route);
-  };
 
   return (
     <>
       <header className="public-header-fixed">
-        {/* Top GI & UNESCO Ribbon from landingpage.html */}
-        <div className="public-ribbon">
-          <div
-            className="public-container"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span className="badge-gi">GI TAG AUTHENTIC</span>
-              <span style={{ color: 'var(--color-on-surface-variant)', fontWeight: 500 }}>
-                100% Direct-to-Artisan Royalties • Certified Tribal Provenance
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ color: 'var(--color-on-surface-variant)', fontWeight: 500 }} className="hidden-sm">
-                UNESCO Intangible Cultural Heritage Preservation Partner
-              </span>
-
-              {/* Role Quick Selector Dropdown */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  type="button"
-                  onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 10px',
-                    borderRadius: '9999px',
-                    backgroundColor: 'var(--color-surface-container-lowest)',
-                    border: '1px solid var(--color-surface-container-high)',
-                    fontSize: '11px',
-                    fontFamily: 'var(--font-sans)',
-                    fontWeight: 600,
-                    color: 'var(--color-on-surface)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-primary)' }} />
-                  <span>{selectedRole}</span>
-                  <ChevronDown size={14} color="var(--color-on-surface-variant)" />
-                </button>
-
-                {roleDropdownOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: '100%',
-                      marginTop: '6px',
-                      backgroundColor: 'var(--color-surface-container-lowest)',
-                      borderRadius: '12px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                      border: '1px solid var(--color-surface-container-high)',
-                      minWidth: '200px',
-                      zIndex: 110,
-                      overflow: 'hidden',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSelect('Public Enthusiast', '/')}
-                      style={{
-                        padding: '10px 14px',
-                        textAlign: 'left',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        color: 'var(--color-on-surface)',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-container-low)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      Public Enthusiast
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSelect('Artist Studio', '/dashboard/artisan')}
-                      style={{
-                        padding: '10px 14px',
-                        textAlign: 'left',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        color: 'var(--color-on-surface)',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-container-low)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      Artist Studio
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSelect('Admin Console', '/dashboard/admin')}
-                      style={{
-                        padding: '10px 14px',
-                        textAlign: 'left',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        color: 'var(--color-on-surface)',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-container-low)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      Executive Admin
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Nav Bar (h-20) from landingpage.html */}
+        {/* Main Clean Nav Bar */}
         <div className="public-container">
           <div className="public-main-nav">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              {/* Brandmark */}
+            {/* Left: Brandmark */}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
                 <img
                   alt="Tvarita Brandmark"
@@ -180,20 +47,11 @@ export default function PublicHeader({ cartCount = 3, onOpenCart }) {
                   </span>
                 </div>
               </Link>
-
-              {/* Desktop Nav Links */}
-              <nav className="public-nav-links" style={{ display: 'flex' }}>
-                <a href="#traditions" className="public-nav-link active">Explore Traditions</a>
-                <a href="#master-artists" className="public-nav-link">Master Artists</a>
-                <a href="#workshops" className="public-nav-link">Workshops &amp; Immersion</a>
-                <a href="#marketplace" className="public-nav-link">Living Marketplace</a>
-                <a href="#terroir" className="public-nav-link">Heritage Archive</a>
-                <Link to="/dashboard/institution" className="public-nav-link">Institutional</Link>
-              </nav>
             </div>
 
-            {/* Header Right Actions */}
+            {/* Right: Actions Cluster */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Search button */}
               <button
                 type="button"
                 aria-label="Search Archive"
@@ -228,6 +86,7 @@ export default function PublicHeader({ cartCount = 3, onOpenCart }) {
                 </kbd>
               </button>
 
+              {/* Saved */}
               <button
                 type="button"
                 aria-label="Saved Artworks"
@@ -247,10 +106,11 @@ export default function PublicHeader({ cartCount = 3, onOpenCart }) {
                 <Bookmark size={20} />
               </button>
 
+              {/* Cart Trigger */}
               <button
                 type="button"
                 aria-label="Marketplace Cart"
-                onClick={onOpenCart || (() => alert('Acquisition Portfolio: 3 Artworks Reserved'))}
+                onClick={onOpenCart || (() => alert(`Acquisition Portfolio: ${cartCount} Artworks Reserved`))}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -265,27 +125,30 @@ export default function PublicHeader({ cartCount = 3, onOpenCart }) {
                 }}
               >
                 <ShoppingBag size={20} />
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--color-primary)',
-                    color: '#ffffff',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {cartCount}
-                </span>
+                {cartCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-primary)',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {cartCount}
+                  </span>
+                )}
               </button>
 
+              {/* Notifications */}
               <button
                 type="button"
                 aria-label="Notifications"
@@ -317,7 +180,7 @@ export default function PublicHeader({ cartCount = 3, onOpenCart }) {
                 />
               </button>
 
-              {/* Login & Register Buttons */}
+              {/* Login & Join Tvarita */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '6px' }}>
                 <Link
                   to="/login"
@@ -396,43 +259,121 @@ export default function PublicHeader({ cartCount = 3, onOpenCart }) {
           </button>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <a
-            href="#traditions"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ textDecoration: 'none', color: 'var(--color-on-surface)', fontSize: '16px', fontWeight: 600 }}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.25rem' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              alert('Search Living Cultural Archive (⌘K)');
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--color-surface-container-low)',
+              border: '1px solid var(--color-surface-container-high)',
+              color: 'var(--color-on-surface)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
           >
-            Explore Traditions
-          </a>
-          <a
-            href="#master-artists"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ textDecoration: 'none', color: 'var(--color-on-surface)', fontSize: '16px', fontWeight: 600 }}
+            <Search size={18} />
+            <span>Search Living Archive</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              if (onOpenCart) onOpenCart();
+              else alert(`Acquisition Portfolio: ${cartCount} Artworks Reserved`);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--color-surface-container-low)',
+              border: '1px solid var(--color-surface-container-high)',
+              color: 'var(--color-on-surface)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
           >
-            Master Artists
-          </a>
-          <a
-            href="#workshops"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ textDecoration: 'none', color: 'var(--color-on-surface)', fontSize: '16px', fontWeight: 600 }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ShoppingBag size={18} />
+              <span>Acquisition Cart</span>
+            </div>
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '9999px',
+                backgroundColor: 'var(--color-primary)',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 700,
+              }}
+            >
+              {cartCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              alert('Saved Artworks Portfolio: 0 items');
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--color-surface-container-low)',
+              border: '1px solid var(--color-surface-container-high)',
+              color: 'var(--color-on-surface)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
           >
-            Workshops &amp; Immersion
-          </a>
-          <a
-            href="#marketplace"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ textDecoration: 'none', color: 'var(--color-on-surface)', fontSize: '16px', fontWeight: 600 }}
+            <Bookmark size={18} />
+            <span>Saved Artworks</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              alert('Living Heritage Notifications: Direct artist field recordings available.');
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--color-surface-container-low)',
+              border: '1px solid var(--color-surface-container-high)',
+              color: 'var(--color-on-surface)',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
           >
-            Living Marketplace
-          </a>
-          <a
-            href="#terroir"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ textDecoration: 'none', color: 'var(--color-on-surface)', fontSize: '16px', fontWeight: 600 }}
-          >
-            Heritage Archive
-          </a>
-        </nav>
+            <Bell size={18} />
+            <span>Notifications</span>
+          </button>
+        </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '1.5rem', borderTop: '1px solid var(--color-surface-container-high)' }}>
           <Link

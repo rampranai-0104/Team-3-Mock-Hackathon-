@@ -504,3 +504,32 @@ export const institutionData = {
     }
   ]
 };
+
+export const followedArtists = masterArtists.filter((a) => a.isFollowing);
+
+export const bookingsList = [
+  {
+    id: "bk_warli_7740",
+    passId: "WAR-7740",
+    title: "Warli Natural Pigment & Sacred Geometry Rituals",
+    artisan: "Dinesh Somashekar",
+    tradition: "Warli Folk Tradition",
+    date: "Sept 19, 2026",
+    time: "10:00 AM - 01:30 PM IST",
+    location: "Palghar Forest Atelier (Hybrid)",
+    prepKitStatus: "In Transit • Bhiwandi Logistics Hub",
+    kitDetails: "Geru ochre brick, sun-dried wild rice wash, 3 bamboo styluses"
+  }
+];
+
+export const initialCartItems = [
+  {
+    id: "prod_warli_canvas",
+    title: "Tarpa Celebration of Winter Harvest",
+    artist: "Dinesh Somashekar",
+    price: 8500,
+    image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80",
+    quantity: 1,
+    escrowDirectPercent: "100%"
+  }
+];

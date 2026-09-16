@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function ArtworkDetailModal({ product, onClose, onAddToCart }) {
+  const [imgError, setImgError] = useState(false);
   if (!product) return null;
 
   return (
@@ -9,12 +10,20 @@ export default function ArtworkDetailModal({ product, onClose, onAddToCart }) {
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Image & Mat */}
           <div className="p-6 bg-surface-container-low flex flex-col items-center justify-center border-r border-outline-variant/20">
-            <div className="p-3 bg-surface-container-high/40 rounded-xl border border-outline-variant/30 shadow-inner">
-              <img 
-                src={product.image} 
-                alt={product.title}
-                className="w-full h-64 object-cover rounded-lg shadow-md"
-              />
+            <div className="w-full p-3 bg-surface-container-high/40 rounded-xl border border-outline-variant/30 shadow-inner">
+              {!imgError && product.image ? (
+                <img 
+                  src={product.image} 
+                  alt=""
+                  onError={() => setImgError(true)}
+                  className="w-full h-64 object-cover rounded-lg shadow-md"
+                />
+              ) : (
+                <div className="w-full h-64 rounded-lg bg-surface-container flex flex-col items-center justify-center text-outline gap-2">
+                  <span className="material-symbols-outlined text-[36px]">palette</span>
+                  <span className="text-xs font-medium">Authentic Masterwork</span>
+                </div>
+              )}
             </div>
             <span className="text-[10px] font-label-caps text-outline uppercase font-semibold mt-3">
               Certified Master Guildpiece

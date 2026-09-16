@@ -73,88 +73,14 @@ export default function ExploreArtists({ artists, followedArtistIds, onToggleFol
           const currentFollowers = artist.followersCount + (isFollowing && !artist.isFollowing ? 1 : (!isFollowing && artist.isFollowing ? -1 : 0));
 
           return (
-            <div
+            <ArtistCard
               key={artist.id}
-              className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div>
-                {/* Artist Header */}
-                <div className="flex items-start gap-3.5 mb-3">
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={artist.avatar}
-                      alt={artist.name}
-                      className="w-16 h-16 rounded-2xl object-cover ring-2 ring-outline-variant/40"
-                    />
-                    <span 
-                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-secondary border-2 border-surface-container-lowest flex items-center justify-center"
-                      title={artist.status}
-                    >
-                      <span className="w-2 h-2 rounded-full bg-white"></span>
-                    </span>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold truncate inline-block max-w-full">
-                      {artist.tradition}
-                    </span>
-                    <h3 className="font-headline-sm text-lg font-bold text-on-surface truncate mt-1">
-                      {artist.name}
-                    </h3>
-                    <p className="text-[11px] text-outline truncate">{artist.region}</p>
-                  </div>
-                </div>
-
-                {/* Status and Bio */}
-                <div className="mb-3">
-                  <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                    <span>{artist.status}</span>
-                  </div>
-                  <p className="text-body-sm text-on-surface-variant line-clamp-2">
-                    {artist.bio}
-                  </p>
-                </div>
-
-                {/* Stats row */}
-                <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-surface-container-low mb-4 text-center">
-                  <div>
-                    <span className="text-[10px] font-label-caps text-outline uppercase block">Experience</span>
-                    <span className="text-xs font-bold text-on-surface">{artist.experience}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-label-caps text-outline uppercase block">Active Patrons</span>
-                    <span className="text-xs font-bold text-primary">{currentFollowers.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/20">
-                <button
-                  type="button"
-                  onClick={() => setActiveModalArtist(artist)}
-                  className="flex-1 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors"
-                >
-                  Guild Profile
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onToggleFollow(artist.id)}
-                  className={`flex-1 py-2 px-3 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs ${
-                    isFollowing
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-on-surface text-surface hover:bg-primary'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[15px]">
-                    {isFollowing ? 'check' : 'person_add'}
-                  </span>
-                  <span>{isFollowing ? 'Following' : 'Follow'}</span>
-                </button>
-              </div>
-            </div>
+              artist={artist}
+              isFollowing={isFollowing}
+              currentFollowers={currentFollowers}
+              onSelectBio={(art) => setActiveModalArtist(art)}
+              onToggleFollow={onToggleFollow}
+            />
           );
         })}
       </div>
@@ -181,6 +107,101 @@ export default function ExploreArtists({ artists, followedArtistIds, onToggleFol
           onClose={() => setActiveModalArtist(null)}
         />
       )}
+    </div>
+  );
+}
+
+function ArtistCard({ artist, isFollowing, currentFollowers, onSelectBio, onToggleFollow }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div>
+        {/* Artist Header */}
+        <div className="flex items-start gap-3.5 mb-3">
+          <div className="relative flex-shrink-0">
+            {artist.avatar && !imageError ? (
+              <img
+                src={artist.avatar}
+                alt=""
+                onError={() => setImageError(true)}
+                className="w-16 h-16 rounded-2xl object-cover ring-2 ring-outline-variant/40"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xl ring-2 ring-outline-variant/40">
+                {artist.name ? artist.name[0] : 'A'}
+              </div>
+            )}
+            <span 
+              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-secondary border-2 border-surface-container-lowest flex items-center justify-center"
+              title={artist.status}
+            >
+              <span className="w-2 h-2 rounded-full bg-white"></span>
+            </span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold truncate inline-block max-w-full">
+              {artist.tradition}
+            </span>
+            <h3 className="font-headline-sm text-lg font-bold text-on-surface truncate mt-1">
+              {artist.name}
+            </h3>
+            <p className="text-[11px] text-outline truncate">{artist.region}</p>
+          </div>
+        </div>
+
+        {/* Status and Bio */}
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            <span>{artist.status}</span>
+          </div>
+          <p className="text-body-sm text-on-surface-variant line-clamp-2">
+            {artist.bio}
+          </p>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-surface-container-low mb-4 text-center">
+          <div>
+            <span className="text-[10px] font-label-caps text-outline uppercase block">Experience</span>
+            <span className="text-xs font-bold text-on-surface">{artist.experience}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-label-caps text-outline uppercase block">Active Patrons</span>
+            <span className="text-xs font-bold text-primary">{currentFollowers.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/20">
+        <button
+          type="button"
+          onClick={() => onSelectBio(artist)}
+          className="flex-1 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors"
+        >
+          Guild Profile
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onToggleFollow(artist.id)}
+          className={`flex-1 py-2 px-3 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs ${
+            isFollowing
+              ? 'bg-primary text-on-primary'
+              : 'bg-on-surface text-surface hover:bg-primary'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[15px]">
+            {isFollowing ? 'check' : 'person_add'}
+          </span>
+          <span>{isFollowing ? 'Following' : 'Follow'}</span>
+        </button>
+      </div>
     </div>
   );
 }

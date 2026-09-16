@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { artForms } from '../../data/mockData';
 
 export default function InstExploreArtForms({ onSelectForWorkshop }) {
-  const [selectedDomain, setSelectedDomain] = useState('All');
 
   const institutionalThemes = [
     {
@@ -57,13 +55,13 @@ export default function InstExploreArtForms({ onSelectForWorkshop }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-outline-variant/30">
         <div>
           <span className="font-label-caps text-xs text-primary font-bold uppercase tracking-widest block mb-1">
-            Section 1 • Institutional Discovery
+            SECTION 1 • CULTURAL LEARNING
           </span>
           <h2 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface">
-            Institutional Cultural Pedagogies
+            Explore Cultural Learning Programs
           </h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Curated indigenous art forms tailored for academic curricula, experiential campus weeks, and corporate CSR leadership modules.
+            Discover indigenous art experiences designed for schools, colleges, organizations, and corporate cultural initiatives.
           </p>
         </div>
 
@@ -77,64 +75,89 @@ export default function InstExploreArtForms({ onSelectForWorkshop }) {
       {/* Grid of Institutional Art Offerings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {institutionalThemes.map((theme) => (
-          <div
+          <InstThemeCard
             key={theme.id}
-            className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-          >
-            <div>
-              <div className="h-48 w-full relative overflow-hidden bg-surface-container">
-                <img
-                  src={theme.image}
-                  alt={theme.name}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
-                  {theme.region}
-                </span>
-                <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-primary text-on-primary text-[10px] font-bold shadow-xs">
-                  {theme.target}
-                </span>
-              </div>
+            theme={theme}
+            onSelectForWorkshop={onSelectForWorkshop}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-              <div className="p-6 space-y-3">
-                <h3 className="font-headline-sm text-xl font-bold text-on-surface">
-                  {theme.name}
-                </h3>
+function InstThemeCard({ theme, onSelectForWorkshop }) {
+  const [imageError, setImageError] = useState(false);
 
-                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-1.5 text-xs">
-                  <div>
-                    <strong className="text-on-surface">Pedagogical Core: </strong>
-                    <span className="text-on-surface-variant">{theme.pedagogyFocus}</span>
-                  </div>
-                  <div>
-                    <strong className="text-secondary">CSR Impact: </strong>
-                    <span className="text-on-secondary-container">{theme.csrImpact}</span>
-                  </div>
-                </div>
+  return (
+    <div
+      className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div>
+        {theme.image && !imageError && (
+          <div className="h-48 w-full relative overflow-hidden bg-surface-container">
+            <img
+              src={theme.image}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover"
+            />
+            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
+              {theme.region}
+            </span>
+            <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-primary text-on-primary text-[10px] font-bold shadow-xs">
+              {theme.target}
+            </span>
+          </div>
+        )}
 
-                <p className="text-body-sm text-on-surface-variant italic">
-                  "{theme.quote}"
-                </p>
-
-                <div className="text-xs text-outline">
-                  <strong>Materials Provisioned:</strong> {theme.materialsKit}
-                </div>
-              </div>
+        <div className="p-6 space-y-3">
+          {(!theme.image || imageError) && (
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface text-[10px] font-label-caps font-bold">
+                {theme.region}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-primary text-on-primary text-[10px] font-bold shadow-xs">
+                {theme.target}
+              </span>
             </div>
+          )}
 
-            <div className="p-4 px-6 border-t border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between">
-              <span className="text-xs text-outline font-semibold">Institutional Pack</span>
-              <button
-                type="button"
-                onClick={() => onSelectForWorkshop(theme.name.split(' ')[0])}
-                className="px-4 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
-              >
-                <span>Book This Tradition</span>
-                <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
-              </button>
+          <h3 className="font-headline-sm text-xl font-bold text-on-surface">
+            {theme.name}
+          </h3>
+
+          <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-1.5 text-xs">
+            <div>
+              <strong className="text-on-surface">Pedagogical Core: </strong>
+              <span className="text-on-surface-variant">{theme.pedagogyFocus}</span>
+            </div>
+            <div>
+              <strong className="text-secondary">CSR Impact: </strong>
+              <span className="text-on-secondary-container">{theme.csrImpact}</span>
             </div>
           </div>
-        ))}
+
+          <p className="text-body-sm text-on-surface-variant italic">
+            "{theme.quote}"
+          </p>
+
+          <div className="text-xs text-outline">
+            <strong>Materials Provisioned:</strong> {theme.materialsKit}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 px-6 border-t border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between">
+        <span className="text-xs text-outline font-semibold">Institutional Pack</span>
+        <button
+          type="button"
+          onClick={() => onSelectForWorkshop(theme.name.split(' ')[0])}
+          className="px-4 py-2 rounded-full bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
+        >
+          <span>Book This Tradition</span>
+          <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+        </button>
       </div>
     </div>
   );

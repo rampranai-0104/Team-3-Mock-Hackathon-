@@ -1,44 +1,74 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function TraditionDetailModal({ tradition, onClose, onExploreWorkshops }) {
+  const [imageError, setImageError] = useState(false);
   if (!tradition) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="relative w-full max-w-2xl bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Modal Banner Image */}
-        <div className="h-56 w-full relative overflow-hidden">
-          <img 
-            src={tradition.image} 
-            alt={tradition.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-          
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 text-white hover:bg-black/80 flex items-center justify-center transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
+        {/* Modal Banner */}
+        {tradition.image && !imageError ? (
+          <div className="h-56 w-full relative overflow-hidden">
+            <img 
+              src={tradition.image} 
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+            
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 text-white hover:bg-black/80 flex items-center justify-center transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
 
-          <div className="absolute bottom-4 left-6 right-6 text-white">
-            <div className="flex items-center gap-2 mb-1">
-              {tradition.giCertified && (
-                <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">
-                  {tradition.giTag} • AUTHENTIC
-                </span>
-              )}
-              <span className="text-xs text-outline-variant">{tradition.region}</span>
+            <div className="absolute bottom-4 left-6 right-6 text-white">
+              <div className="flex items-center gap-2 mb-1">
+                {tradition.giCertified && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">
+                    {tradition.giTag} • AUTHENTIC
+                  </span>
+                )}
+                <span className="text-xs text-outline-variant">{tradition.region}</span>
+              </div>
+              <h2 className="font-headline-md text-2xl lg:text-3xl font-bold leading-tight">
+                {tradition.name}
+              </h2>
+              <p className="text-xs text-primary-fixed italic mt-0.5">
+                "{tradition.tagline}"
+              </p>
             </div>
-            <h2 className="font-headline-md text-2xl lg:text-3xl font-bold leading-tight">
-              {tradition.name}
-            </h2>
-            <p className="text-xs text-primary-fixed italic mt-0.5">
-              "{tradition.tagline}"
-            </p>
           </div>
-        </div>
+        ) : (
+          <div className="p-6 bg-surface-container-high border-b border-outline-variant/30 relative">
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-highest flex items-center justify-center transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <div className="pr-10">
+              <div className="flex items-center gap-2 mb-2">
+                {tradition.giCertified && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-label-caps font-bold">
+                    {tradition.giTag} • AUTHENTIC
+                  </span>
+                )}
+                <span className="text-xs text-on-surface-variant font-medium">{tradition.region}</span>
+              </div>
+              <h2 className="font-headline-md text-2xl lg:text-3xl font-bold text-on-surface leading-tight">
+                {tradition.name}
+              </h2>
+              <p className="text-xs text-primary font-medium italic mt-1">
+                "{tradition.tagline}"
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Content Body */}
         <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">

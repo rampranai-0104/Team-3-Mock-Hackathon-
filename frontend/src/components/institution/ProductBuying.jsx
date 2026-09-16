@@ -60,80 +60,12 @@ export default function ProductBuying() {
         {souvenirs.map((item) => {
           const qty = quantities[item.id] || 0;
           return (
-            <div
+            <SouvenirCard
               key={item.id}
-              className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="h-48 w-full relative overflow-hidden bg-surface-container p-3 flex items-center justify-center">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-cover rounded-xl shadow-xs"
-                  />
-                  <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
-                    MOQ {item.moq} UNITS
-                  </span>
-                </div>
-
-                <div className="p-5 space-y-2">
-                  <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
-                    {item.tradition}
-                  </span>
-                  <h3 className="font-headline-sm text-base font-bold text-on-surface">
-                    {item.title}
-                  </h3>
-                  <p className="text-body-sm text-on-surface-variant line-clamp-2">
-                    {item.description}
-                  </p>
-
-                  <div className="pt-2 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-label-caps text-outline uppercase block">Unit Price</span>
-                      <span className="font-headline-sm text-lg font-bold text-primary">
-                        ₹{item.unitPrice.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] font-label-caps text-outline uppercase block">Item Subtotal</span>
-                      <span className="font-headline-sm text-sm font-bold text-on-surface">
-                        ₹{(item.unitPrice * qty).toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quantity Stepper */}
-              <div className="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
-                <span className="text-xs text-outline font-semibold">Bulk Requisition Qty</span>
-
-                <div className="flex items-center gap-2 bg-surface-container px-2 py-1 rounded-full border border-outline-variant/30">
-                  <button
-                    type="button"
-                    onClick={() => handleQtyChange(item.id, qty - 5)}
-                    className="w-6 h-6 rounded-full bg-surface text-on-surface hover:bg-primary hover:text-white flex items-center justify-center text-xs font-bold transition-colors"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min={0}
-                    value={qty}
-                    onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                    className="w-12 text-center text-xs font-bold bg-transparent text-on-surface focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleQtyChange(item.id, qty + 5)}
-                    className="w-6 h-6 rounded-full bg-surface text-on-surface hover:bg-primary hover:text-white flex items-center justify-center text-xs font-bold transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
+              item={item}
+              qty={qty}
+              onQtyChange={handleQtyChange}
+            />
           );
         })}
       </div>
@@ -275,6 +207,97 @@ export default function ProductBuying() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SouvenirCard({ item, qty, onQtyChange }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div>
+        {item.image && !imageError && (
+          <div className="h-48 w-full relative overflow-hidden bg-surface-container p-3 flex items-center justify-center">
+            <img
+              src={item.image}
+              alt=""
+              onError={() => setImageError(true)}
+              className="w-full h-full object-cover rounded-xl shadow-xs"
+            />
+            <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[10px] font-label-caps font-bold">
+              MOQ {item.moq} UNITS
+            </span>
+          </div>
+        )}
+
+        <div className="p-5 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-label-caps text-outline uppercase font-semibold block">
+              {item.tradition}
+            </span>
+            {(!item.image || imageError) && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-surface-container text-on-surface font-semibold">
+                MOQ {item.moq} UNITS
+              </span>
+            )}
+          </div>
+
+          <h3 className="font-headline-sm text-base font-bold text-on-surface">
+            {item.title}
+          </h3>
+          <p className="text-body-sm text-on-surface-variant line-clamp-2">
+            {item.description}
+          </p>
+
+          <div className="pt-2 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-label-caps text-outline uppercase block">Unit Price</span>
+              <span className="font-headline-sm text-lg font-bold text-primary">
+                ₹{item.unitPrice.toLocaleString('en-IN')}
+              </span>
+            </div>
+
+            <div className="text-right">
+              <span className="text-[10px] font-label-caps text-outline uppercase block">Item Subtotal</span>
+              <span className="font-headline-sm text-sm font-bold text-on-surface">
+                ₹{(item.unitPrice * qty).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quantity Stepper */}
+      <div className="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-low/50 flex items-center justify-between">
+        <span className="text-xs text-outline font-semibold">Bulk Requisition Qty</span>
+
+        <div className="flex items-center gap-2 bg-surface-container px-2 py-1 rounded-full border border-outline-variant/30">
+          <button
+            type="button"
+            onClick={() => onQtyChange(item.id, qty - 5)}
+            className="w-6 h-6 rounded-full bg-surface text-on-surface hover:bg-primary hover:text-white flex items-center justify-center text-xs font-bold transition-colors"
+          >
+            -
+          </button>
+          <input
+            type="number"
+            min={0}
+            value={qty}
+            onChange={(e) => onQtyChange(item.id, e.target.value)}
+            className="w-12 text-center text-xs font-bold bg-transparent text-on-surface focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => onQtyChange(item.id, qty + 5)}
+            className="w-6 h-6 rounded-full bg-surface text-on-surface hover:bg-primary hover:text-white flex items-center justify-center text-xs font-bold transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

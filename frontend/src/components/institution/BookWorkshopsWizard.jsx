@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 export default function BookWorkshopsWizard({ initialForm = 'Warli', onInquirySubmitted }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedForm, setSelectedForm] = useState(initialForm);
+  const [prevInitialForm, setPrevInitialForm] = useState(initialForm);
   const [selectedArchetype, setSelectedArchetype] = useState('Residency');
   const [deliveryFormat, setDeliveryFormat] = useState('On-Campus');
   const [cohortCount, setCohortCount] = useState(150);
@@ -12,24 +13,21 @@ export default function BookWorkshopsWizard({ initialForm = 'Warli', onInquirySu
   // Step 3 Kits & Murals
   const [includeKits, setIncludeKits] = useState(true);
   const [includeMural, setIncludeMural] = useState(true);
-  const [csrBudget, setCsrBudget] = useState(145000);
 
   // Step 4 state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [inquiryId, setInquiryId] = useState('TVR-882');
 
-  useEffect(() => {
-    if (initialForm) setSelectedForm(initialForm);
-  }, [initialForm]);
+  if (initialForm !== prevInitialForm) {
+    setPrevInitialForm(initialForm);
+    setSelectedForm(initialForm);
+  }
 
-  // Dynamic recalculation of budget based on cohort and kits
-  useEffect(() => {
-    let base = 60000;
-    if (includeKits) base += cohortCount * 480;
-    if (includeMural) base += 35000;
-    setCsrBudget(base);
-  }, [cohortCount, includeKits, includeMural]);
+  // Dynamic derivation of budget based on cohort and kits
+  let csrBudget = 60000;
+  if (includeKits) csrBudget += cohortCount * 480;
+  if (includeMural) csrBudget += 35000;
 
   const directWages = Math.round(csrBudget * 0.884);
   const trustSplit = csrBudget - directWages;

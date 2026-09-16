@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantity, onRemoveItem }) {
   if (!isOpen) return null;
@@ -39,51 +39,12 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
               </div>
             ) : (
               cartItems.map((item) => (
-                <div 
-                  key={item.id} 
-                  className="p-3 rounded-xl bg-surface-container-low flex gap-3 border border-outline-variant/20"
-                >
-                  <img 
-                    src={item.image} 
-                    alt={item.title} 
-                    className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                  />
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-title-lg text-sm font-semibold text-on-surface line-clamp-1">{item.title}</h4>
-                        <button 
-                          onClick={() => onRemoveItem(item.id)}
-                          className="text-outline hover:text-error transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-outline">{item.artist} • {item.tradition}</p>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2 bg-surface-container px-2 py-0.5 rounded-full text-xs">
-                        <button 
-                          onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                          className="text-on-surface-variant hover:text-on-surface"
-                        >
-                          -
-                        </button>
-                        <span className="font-semibold px-1">{item.quantity}</span>
-                        <button 
-                          onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                          className="text-on-surface-variant hover:text-on-surface"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span className="font-headline-sm text-sm font-bold text-primary">
-                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <CartItemRow
+                  key={item.id}
+                  item={item}
+                  onUpdateQuantity={onUpdateQuantity}
+                  onRemoveItem={onRemoveItem}
+                />
               ))
             )}
           </div>
@@ -114,6 +75,64 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
               </button>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CartItemRow({ item, onUpdateQuantity, onRemoveItem }) {
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div 
+      className="p-3 rounded-xl bg-surface-container-low flex gap-3 border border-outline-variant/20"
+    >
+      {item.image && !imgError ? (
+        <img 
+          src={item.image} 
+          alt="" 
+          onError={() => setImgError(true)}
+          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+        />
+      ) : (
+        <div className="w-20 h-20 rounded-lg bg-surface-container flex items-center justify-center text-outline flex-shrink-0">
+          <span className="material-symbols-outlined text-[24px]">palette</span>
+        </div>
+      )}
+      <div className="flex-1 flex flex-col justify-between">
+        <div>
+          <div className="flex justify-between items-start">
+            <h4 className="font-title-lg text-sm font-semibold text-on-surface line-clamp-1">{item.title}</h4>
+            <button 
+              onClick={() => onRemoveItem(item.id)}
+              className="text-outline hover:text-error transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-outline">{item.artist} • {item.tradition}</p>
+        </div>
+
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-2 bg-surface-container px-2 py-0.5 rounded-full text-xs">
+            <button 
+              onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
+              className="text-on-surface-variant hover:text-on-surface"
+            >
+              -
+            </button>
+            <span className="font-semibold px-1">{item.quantity}</span>
+            <button 
+              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+              className="text-on-surface-variant hover:text-on-surface"
+            >
+              +
+            </button>
+          </div>
+          <span className="font-headline-sm text-sm font-bold text-primary">
+            ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+          </span>
         </div>
       </div>
     </div>
