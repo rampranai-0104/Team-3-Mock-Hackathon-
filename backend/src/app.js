@@ -9,8 +9,13 @@ dotenv.config();
 
 const { sendSuccess, sendError } = require('./utils/apiResponse');
 
-// Import routes
+// Import artist routes
 const artistProfileRoutes = require('./routes/artist/profileRoutes');
+const artistRequestRoutes = require('./routes/artist/requestRoutes');
+const artistEventRoutes = require('./routes/artist/eventRoutes');
+const artistEarningsRoutes = require('./routes/artist/earningsRoutes');
+const artistFollowerRoutes = require('./routes/artist/followerRoutes');
+const artistProductRoutes = require('./routes/artist/productRoutes');
 
 const app = express();
 
@@ -32,8 +37,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Route mountings
-app.use('/api/artists', artistProfileRoutes);
+// Artist Portal Route Mountings
+app.use('/api/artists/me/requests', artistRequestRoutes);
+app.use('/api/artists/me/events', artistEventRoutes);
+app.use('/api/artists/me/earnings', artistEarningsRoutes);
+app.use('/api/artists/me/followers', artistFollowerRoutes);
+app.use('/api/artists/me/products', artistProductRoutes);
+app.use('/api/artists', artistProfileRoutes); // Handles /api/artists/me and /api/artists/me/media
 
 // Catch 404 routes
 app.use((req, res) => {
